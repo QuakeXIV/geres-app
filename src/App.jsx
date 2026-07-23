@@ -31,7 +31,11 @@ export default function App() {
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
-        padding: '15px 20px', 
+        // Substitui a linha do padding no Header por estas 4:
+        paddingTop: 'calc(15px + env(safe-area-inset-top))',
+        paddingBottom: '15px',
+        paddingLeft: '20px',
+        paddingRight: '20px', 
         background: 'rgba(255, 255, 255, 0.85)', 
         backdropFilter: 'blur(10px)',
         borderBottom: '1px solid rgba(255, 255, 255, 0.5)',
