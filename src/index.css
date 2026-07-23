@@ -23,6 +23,19 @@ body {
   justify-content: center;
   min-height: 100vh;
   background-attachment: fixed;
+  
+  /* TRUQUES NATIVOS */
+  -webkit-user-select: none; /* Impede selecionar texto no iPhone */
+  user-select: none; /* Impede selecionar texto nos outros */
+  -webkit-touch-callout: none; /* Tira aquele menu de "Guardar Imagem" ao premir */
+  -webkit-tap-highlight-color: transparent; /* Tira o quadrado azul ao clicar nos botões */
+  overscroll-behavior-y: none; /* Impede aquele efeito de "puxar para baixo para atualizar" */
+}
+
+/* Permitir que os inputs possam ser selecionados para escrever o texto */
+input, textarea {
+  -webkit-user-select: auto;
+  user-select: auto;
 }
 
 #root {
