@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Beer, Award, BookOpen, Plus, Flame } from 'lucide-react';
+import { Beer, Award, BookOpen, Plus, Flame, Trash2 } from 'lucide-react';
 
 export default function Tasca({ session }) {
   const [subTab, setSubTab] = useState('leaderboard');
@@ -22,7 +22,7 @@ export default function Tasca({ session }) {
     { id: 3, nome: 'Copo de Vinho', putometro: 4, icone: '🍷' },
     { id: 4, nome: 'Jarra de Sangria', putometro: 8, icone: '🍹' },
     { id: 5, nome: 'Shot de Absinto', putometro: 10, icone: '☠️' },
-    { id: 6, nome: 'Garrafa delicor / Vodka', putometro: 25, icone: '🍾' },
+    { id: 6, nome: 'Garrafa de licor / Vodka', putometro: 25, icone: '🍾' },
   ]);
 
   useEffect(() => {
@@ -30,17 +30,16 @@ export default function Tasca({ session }) {
   }, []);
 
   async function carregarDadosTasca() {
-    // 1. Buscamos os drinks todos sem fazer joins complexos
     const { data: drinksData, error: drinksError } = await supabase
       .from('drinks')
-      .select('*');
+      .select('*')
+      .order('created_at', { ascending: false });
 
     if (drinksError) {
       showToast(`Erro drinks: ${drinksError.message}`, 'error');
       return;
     }
 
-    // 2. Buscamos os perfis todos em separado
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
       .select('id, username');
@@ -50,7 +49,6 @@ export default function Tasca({ session }) {
       return;
     }
 
-    // 3. Cruzamos os dados manualmente aqui no código (à prova de falhas)
     const drinksComPerfis = (drinksData || []).map(drink => {
       const perfil = (profilesData || []).find(p => p.id === drink.user_id);
       return {
@@ -67,7 +65,6 @@ export default function Tasca({ session }) {
     const scores = {};
 
     registos.forEach((registo) => {
-      // Se o profile falhar, usa o ID ou um nome genérico para não perder o registo
       const username = registo.profiles?.username || 'Membro do Grupo';
       
       const bebidaInfo = tabelaPutometros.find(
@@ -97,7 +94,6 @@ export default function Tasca({ session }) {
 
     setLoading(true);
 
-    // Insere diretamente na tabela
     const { error } = await supabase.from('drinks').insert([{
       user_id: session.user.id,
       drink_name: selectedDrink,
@@ -110,9 +106,21 @@ export default function Tasca({ session }) {
       showToast('Consumo registado com sucesso! 🍻', 'success');
       setSelectedDrink('');
       setQuantidade(1);
-      await carregarDadosTasca();
+      await carregarDadosTasca(); // Atualiza leaderboard na hora
     }
     setLoading(false);
+  }
+
+  // NOVA FUNÇÃO: Apagar um registo de bebida
+  async function apagarConsumo(drinkId) {
+    const { error } = await supabase.from('drinks').delete().eq('id', drinkId);
+
+    if (error) {
+      showToast(`Erro ao apagar: ${error.message}`, 'error');
+    } else {
+      showToast('Consumo removido! 🗑️', 'success');
+      await carregarDadosTasca(); // Atualiza leaderboard na hora
+    }
   }
 
   return (
@@ -206,6 +214,32 @@ export default function Tasca({ session }) {
                     <Flame size={16} />
                     <span>{item.totalPutometros} Pts</span>
                   </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* LISTA RECENTE DE CONSUMOS COM BOTÃO DE APAGAR */}
+          <div className="card">
+            <h3 style={{ margin: '0 0 15px 0', fontSize: '18px' }}>📜 Histórico de Consumos</h3>
+            {drinks.length === 0 ? (
+              <p style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '13px' }}>Sem registos recentes.</p>
+            ) : (
+              drinks.map((drink) => (
+                <div key={drink.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', marginBottom: '8px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                  <div>
+                    <span style={{ fontWeight: 'bold', fontSize: '14px', color: 'var(--accent)' }}>@{drink.profiles?.username}</span>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: 'var(--text)' }}>
+                      {drink.quantity}x {drink.drink_name}
+                    </p>
+                  </div>
+                  {/* Botão para apagar este registo específico */}
+                  <button 
+                    onClick={() => apagarConsumo(drink.id)}
+                    style={{ background: '#fee2e2', border: 'none', borderRadius: '8px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Trash2 size={16} color="#ef4444" />
+                  </button>
                 </div>
               ))
             )}
