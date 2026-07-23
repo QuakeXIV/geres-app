@@ -43,15 +43,18 @@ export default function Tasca({ session }) {
   }
 
   // Função matemática para calcular o Putómetro total de cada gajo
-  function calcularLeaderboard(registos) {
+ function calcularLeaderboard(registos) {
     const scores = {};
 
     registos.forEach((registo) => {
       const username = registo.profiles?.username || 'Membro Anónimo';
-      // Procura o valor do putómetro da bebida na nossa tabela
-      const bebidaInfo = tabelaPutometros.find(b => b.nome.toLowerCase() === registo.drink_name.toLowerCase());
-      const valorPutometro = bebidaInfo ? bebidaInfo.putometro : 1; // Default se não encontrar
       
+      // Procura a bebida limpando espaços e ignorando maiúsculas
+      const bebidaInfo = tabelaPutometros.find(
+        b => b.nome.trim().toLowerCase() === registo.drink_name.trim().toLowerCase()
+      );
+      
+      const valorPutometro = bebidaInfo ? bebidaInfo.putometro : 2; // Default de segurança se não encontrar
       const totalGanha = valorPutometro * (registo.quantity || 1);
 
       if (!scores[username]) {
@@ -60,7 +63,6 @@ export default function Tasca({ session }) {
       scores[username] += totalGanha;
     });
 
-    // Converter para array e ordenar do MAIOR para o MENOR (quem tem mais putómetros fica em 1º)
     const rankingArray = Object.keys(scores).map(user => ({
       username: user,
       totalPutometros: scores[user]
@@ -142,7 +144,7 @@ export default function Tasca({ session }) {
               <Plus size={20} color="var(--accent)" /> Registo de Consumos
             </h3>
             <form onSubmit={registarBebida}>
-              <select
+            <select
                 className="input-field"
                 value={selectedDrink}
                 onChange={(e) => setSelectedDrink(e.target.value)}
