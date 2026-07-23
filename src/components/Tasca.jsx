@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient';
 import { Beer, Award, BookOpen, Plus, Flame } from 'lucide-react';
 
 export default function Tasca({ session }) {
-  const [subTab, setSubTab] = useState('leaderboard'); // 'leaderboard' ou 'putometros'
+  const [subTab, setSubTab] = useState('leaderboard');
   const [drinks, setDrinks] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [selectedDrink, setSelectedDrink] = useState('');
@@ -13,11 +13,10 @@ export default function Tasca({ session }) {
 
   function showToast(message, type = 'success') {
     setToast({ show: true, message, type });
-    setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
+    setTimeout(() => setToast({ show: false, message: '', type: '' }), 4000);
   }
 
-  // Tabela de Putómetros pré-definida (Podes alterar os valores à vontade!)
-  const [tabelaPutometros, setTabelaPutometros] = useState([
+  const [tabelaPutometros] = useState([
     { id: 1, nome: 'Imperial / fino', putometro: 2, icone: '🍺' },
     { id: 2, nome: 'Shot de Tequila', putometro: 5, icone: '🥃' },
     { id: 3, nome: 'Copo de Vinho', putometro: 4, icone: '🍷' },
@@ -31,30 +30,35 @@ export default function Tasca({ session }) {
   }, []);
 
   async function carregarDadosTasca() {
-    // Carregar os consumos registados
-    const { data: drinksData } = await supabase
+    // Vamos buscar os drinks SEM depender obrigatoriamente do join com profiles para testar
+    const { data, error } = await supabase
       .from('drinks')
       .select('*, profiles(username)');
 
-    if (drinksData) {
-      setDrinks(drinksData);
-      calcularLeaderboard(drinksData);
+    if (error) {
+      console.error("Erro a carregar drinks:", error);
+      showToast(`Erro DB: ${error.message}`, 'error');
+      return;
+    }
+
+    if (data) {
+      setDrinks(data);
+      calcularLeaderboard(data);
     }
   }
 
-  // Função matemática para calcular o Putómetro total de cada gajo
- function calcularLeaderboard(registos) {
+  function calcularLeaderboard(registos) {
     const scores = {};
 
     registos.forEach((registo) => {
-      const username = registo.profiles?.username || 'Membro Anónimo';
+      // Se o profile falhar, usa o ID ou um nome genérico para não perder o registo
+      const username = registo.profiles?.username || 'Membro do Grupo';
       
-      // Procura a bebida limpando espaços e ignorando maiúsculas
       const bebidaInfo = tabelaPutometros.find(
         b => b.nome.trim().toLowerCase() === registo.drink_name.trim().toLowerCase()
       );
       
-      const valorPutometro = bebidaInfo ? bebidaInfo.putometro : 2; // Default de segurança se não encontrar
+      const valorPutometro = bebidaInfo ? bebidaInfo.putometro : 2;
       const totalGanha = valorPutometro * (registo.quantity || 1);
 
       if (!scores[username]) {
@@ -71,11 +75,13 @@ export default function Tasca({ session }) {
     setLeaderboard(rankingArray);
   }
 
- async function registarBebida(e) {
+  async function registarBebida(e) {
     e.preventDefault();
     if (!selectedDrink) return showToast('Escolhe uma bebida!', 'error');
 
     setLoading(true);
+
+    // Insere diretamente na tabela
     const { error } = await supabase.from('drinks').insert([{
       user_id: session.user.id,
       drink_name: selectedDrink,
@@ -83,14 +89,12 @@ export default function Tasca({ session }) {
     }]);
 
     if (error) {
-      showToast(error.message, 'error');
+      showToast(`Erro ao gravar: ${error.message}`, 'error');
     } else {
-      showToast('Consumo registado à comissão! 🍻', 'success');
+      showToast('Consumo registado com sucesso! 🍻', 'success');
       setSelectedDrink('');
       setQuantidade(1);
-      
-      // ESTE É O PASSO CRÍTICO: Atualiza os dados imediatamente na página
-      await carregarDadosTasca(); 
+      await carregarDadosTasca();
     }
     setLoading(false);
   }
@@ -98,53 +102,40 @@ export default function Tasca({ session }) {
   return (
     <div style={{ padding: '10px', paddingBottom: 'calc(130px + env(safe-area-inset-bottom))' }}>
       
-      {/* Toast de aviso */}
       {toast.show && (
         <div className={`custom-toast ${toast.type === 'error' ? 'toast-error' : 'toast-success'}`} style={{ position: 'fixed', top: 'calc(60px + env(safe-area-inset-top))', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, width: '90%', maxWidth: '400px' }}>
           {toast.message}
         </div>
       )}
 
-      {/* Cabeçalho da Tasca */}
       <div className="card" style={{ textAlign: 'center', background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', color: 'white' }}>
         <h2 style={{ margin: '0 0 5px 0' }}>🍻 Tasca do Gerês</h2>
         <p style={{ margin: 0, fontSize: '14px', opacity: 0.9 }}>Medidor oficial de estragos hepáticos</p>
         
-        {/* Sub-abas internas da Tasca */}
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '15px' }}>
           <button 
             onClick={() => setSubTab('leaderboard')}
-            style={{ 
-              background: subTab === 'leaderboard' ? 'white' : 'rgba(255,255,255,0.2)', 
-              color: subTab === 'leaderboard' ? 'var(--accent)' : 'white',
-              border: 'none', padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px'
-            }}
+            style={{ background: subTab === 'leaderboard' ? 'white' : 'rgba(255,255,255,0.2)', color: subTab === 'leaderboard' ? 'var(--accent)' : 'white', border: 'none', padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' }}
           >
             🏆 Leaderboard
           </button>
           <button 
             onClick={() => setSubTab('putometros')}
-            style={{ 
-              background: subTab === 'putometros' ? 'white' : 'rgba(255,255,255,0.2)', 
-              color: subTab === 'putometros' ? 'var(--accent)' : 'white',
-              border: 'none', padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px'
-            }}
+            style={{ background: subTab === 'putometros' ? 'white' : 'rgba(255,255,255,0.2)', color: subTab === 'putometros' ? 'var(--accent)' : 'white', border: 'none', padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' }}
           >
             📖 Tabela de Putómetros
           </button>
         </div>
       </div>
 
-      {/* CONTEÚDO DA SUB-ABA: LEADERBOARD E REGISTO */}
       {subTab === 'leaderboard' && (
         <>
-          {/* Caixa para registar novos copos */}
           <div className="card">
             <h3 style={{ margin: '0 0 12px 0', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Plus size={20} color="var(--accent)" /> Registo de Consumos
             </h3>
             <form onSubmit={registarBebida}>
-            <select
+              <select
                 className="input-field"
                 value={selectedDrink}
                 onChange={(e) => setSelectedDrink(e.target.value)}
@@ -175,7 +166,6 @@ export default function Tasca({ session }) {
             </form>
           </div>
 
-          {/* O Pódio / Leaderboard */}
           <div className="card">
             <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Award size={22} color="#eab308" /> Leaderboard de Putómetros
@@ -187,11 +177,7 @@ export default function Tasca({ session }) {
               </p>
             ) : (
               leaderboard.map((item, index) => (
-                <div key={index} style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '12px 15px', margin: '8px 0', background: index === 0 ? '#fef08a' : '#f8fafc',
-                  borderRadius: '12px', border: index === 0 ? '2px solid #eab308' : '1px solid #e2e8f0'
-                }}>
+                <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', margin: '8px 0', background: index === 0 ? '#fef08a' : '#f8fafc', borderRadius: '12px', border: index === 0 ? '2px solid #eab308' : '1px solid #e2e8f0' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <span style={{ fontSize: '18px', fontWeight: 'bold', width: '25px', textAlign: 'center' }}>
                       {index === 0 ? '👑' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
@@ -211,7 +197,6 @@ export default function Tasca({ session }) {
         </>
       )}
 
-      {/* CONTEÚDO DA SUB-ABA: TABELA DE PUTÓMETROS */}
       {subTab === 'putometros' && (
         <div className="card">
           <h3 style={{ margin: '0 0 5px 0', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -223,10 +208,7 @@ export default function Tasca({ session }) {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {tabelaPutometros.map((bebida) => (
-              <div key={bebida.id} style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0'
-              }}>
+              <div key={bebida.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <span style={{ fontSize: '24px' }}>{bebida.icone}</span>
                   <span style={{ fontWeight: 'bold', fontSize: '15px', color: 'var(--text)' }}>{bebida.nome}</span>
@@ -237,12 +219,9 @@ export default function Tasca({ session }) {
               </div>
             ))}
           </div>
-          <p style={{ fontSize: '12px', textAlign: 'center', color: 'var(--text-dim)', marginTop: '20px' }}>
-            *(Estes valores são arbitrários e sujeitos a alteração de acordo com o grau de alcoolemia do grupo).*
-          </p>
         </div>
       )}
 
     </div>
   );
-}   
+}
