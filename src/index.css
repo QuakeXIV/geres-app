@@ -1,3 +1,9 @@
+
+html {
+  overscroll-behavior: none;
+  background-color: #fb923c; /* Se houver um micro-salto, mostra a cor do tema e não branco/cinza */
+}
+
 :root {
   /* Cores de Verão / Sunset */
   --bg-primary: #ffedd5;
@@ -133,7 +139,11 @@ input, textarea {
   border-top: 1px solid rgba(255, 255, 255, 0.5);
   display: flex;
   justify-content: space-around;
-  padding: 12px 0 20px 0; /* Mais espaço em baixo para os iPhones */
+  
+  /* AQUI ESTÁ O SEGREDO: O env() calcula o espaço exato do traço do iPhone */
+  padding-top: 12px;
+  padding-bottom: calc(15px + env(safe-area-inset-bottom)); 
+  
   z-index: 100;
   border-radius: 20px 20px 0 0;
   box-shadow: 0 -5px 20px rgba(0,0,0,0.08);
