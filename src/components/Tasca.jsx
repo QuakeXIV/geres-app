@@ -30,21 +30,37 @@ export default function Tasca({ session }) {
   }, []);
 
   async function carregarDadosTasca() {
-    // Vamos buscar os drinks SEM depender obrigatoriamente do join com profiles para testar
-    const { data, error } = await supabase
+    // 1. Buscamos os drinks todos sem fazer joins complexos
+    const { data: drinksData, error: drinksError } = await supabase
       .from('drinks')
-      .select('*, profiles(username)');
+      .select('*');
 
-    if (error) {
-      console.error("Erro a carregar drinks:", error);
-      showToast(`Erro DB: ${error.message}`, 'error');
+    if (drinksError) {
+      showToast(`Erro drinks: ${drinksError.message}`, 'error');
       return;
     }
 
-    if (data) {
-      setDrinks(data);
-      calcularLeaderboard(data);
+    // 2. Buscamos os perfis todos em separado
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, username');
+
+    if (profilesError) {
+      showToast(`Erro profiles: ${profilesError.message}`, 'error');
+      return;
     }
+
+    // 3. Cruzamos os dados manualmente aqui no código (à prova de falhas)
+    const drinksComPerfis = (drinksData || []).map(drink => {
+      const perfil = (profilesData || []).find(p => p.id === drink.user_id);
+      return {
+        ...drink,
+        profiles: perfil || { username: 'Membro do Grupo' }
+      };
+    });
+
+    setDrinks(drinksComPerfis);
+    calcularLeaderboard(drinksComPerfis);
   }
 
   function calcularLeaderboard(registos) {
