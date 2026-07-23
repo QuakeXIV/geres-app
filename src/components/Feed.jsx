@@ -87,12 +87,26 @@ export default function Feed({ session }) {
     }
   }
 
-  async function toggleLike(postId, jaDeuLike) {
+ async function toggleLike(postId, jaDeuLike) {
+    // 1. ATUALIZAÇÃO OTIMISTA: Muda o ecrã imediatamente sem esperar pela base de dados
+    setPosts(postsAtuais => postsAtuais.map(post => {
+      if (post.id === postId) {
+        const novosLikes = jaDeuLike
+          ? post.likes.filter(l => l.user_id !== session.user.id) // Tira o like localmente
+          : [...(post.likes || []), { user_id: session.user.id }]; // Adiciona o like localmente
+        return { ...post, likes: novosLikes };
+      }
+      return post;
+    }));
+
+    // 2. Manda a informação para a base de dados nos bastidores
     if (jaDeuLike) {
       await supabase.from('likes').delete().eq('post_id', postId).eq('user_id', session.user.id);
     } else {
       await supabase.from('likes').insert([{ post_id: postId, user_id: session.user.id }]);
     }
+    
+    // 3. Atualiza os dados finais de forma silenciosa para garantir sincronização
     carregarPosts();
   }
 
@@ -163,11 +177,23 @@ export default function Feed({ session }) {
         </div>
       )}
 
-      {/* FEED DE POSTS */}
+    {/* FEED DE POSTS */}
       {posts.length === 0 ? (
-        <p style={{ textAlign: 'center', color: 'var(--text-dim)', marginTop: '50px' }}>
-          O feed está vazio. Sê o primeiro a publicar!
-        </p>
+        <div style={{ 
+          textAlign: 'center', 
+          marginTop: '60px', 
+          padding: '30px 20px', 
+          background: 'rgba(255, 255, 255, 0.6)', 
+          borderRadius: '16px', 
+          border: '2px dashed var(--accent)',
+          backdropFilter: 'blur(5px)'
+        }}>
+          <span style={{ fontSize: '45px', display: 'block', marginBottom: '15px' }}>🏜️</span>
+          <h3 style={{ color: 'var(--accent)', margin: '0 0 10px 0', fontSize: '22px' }}>O feed está uma seca!</h3>
+          <p style={{ color: 'var(--text)', margin: 0, fontWeight: '500', fontSize: '15px' }}>
+            Ainda ninguém publicou nada. Clica no botão laranja no fundo do ecrã e arranca com a festa! 🍻
+          </p>
+        </div>
       ) : (
         posts.map((post) => {
           const jaDeuLike = post.likes?.some((l) => l.user_id === session.user.id);
