@@ -69,7 +69,7 @@ export default function Tasca({ session }) {
     setLeaderboard(rankingArray);
   }
 
-  async function registarBebida(e) {
+ async function registarBebida(e) {
     e.preventDefault();
     if (!selectedDrink) return showToast('Escolhe uma bebida!', 'error');
 
@@ -86,7 +86,9 @@ export default function Tasca({ session }) {
       showToast('Consumo registado à comissão! 🍻', 'success');
       setSelectedDrink('');
       setQuantidade(1);
-      carregarDadosTasca();
+      
+      // ESTE É O PASSO CRÍTICO: Atualiza os dados imediatamente na página
+      await carregarDadosTasca(); 
     }
     setLoading(false);
   }
@@ -96,7 +98,7 @@ export default function Tasca({ session }) {
       
       {/* Toast de aviso */}
       {toast.show && (
-        <div className={`custom-toast ${toast.type === 'error' ? 'toast-error' : 'toast-success'}`} style={{ position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, width: '90%', maxWidth: '400px' }}>
+        <div className={`custom-toast ${toast.type === 'error' ? 'toast-error' : 'toast-success'}`} style={{ position: 'fixed', top: 'calc(60px + env(safe-area-inset-top))', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, width: '90%', maxWidth: '400px' }}>
           {toast.message}
         </div>
       )}
