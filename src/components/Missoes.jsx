@@ -162,8 +162,8 @@ export default function Missoes({ session }) {
         </div>
       )}
 
-      {/* CABEÇALHO (Estilo Tasca mas versão Missões) */}
-      <div className="card" style={{ textAlign: 'center', background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', color: 'white' }}>
+      {/* CABEÇALHO (Agora com o Laranja Oficial da App) */}
+      <div className="card" style={{ textAlign: 'center', background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', color: 'white' }}>
         <h2 style={{ margin: '0 0 5px 0', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
           <ShieldAlert size={26} /> Missões Diárias
         </h2>
@@ -172,13 +172,13 @@ export default function Missoes({ session }) {
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '15px' }}>
           <button 
             onClick={() => setSubTab('diarios')}
-            style={{ background: subTab === 'diarios' ? 'white' : 'rgba(255,255,255,0.2)', color: subTab === 'diarios' ? '#2563eb' : 'white', border: 'none', padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s' }}
+            style={{ background: subTab === 'diarios' ? 'white' : 'rgba(255,255,255,0.2)', color: subTab === 'diarios' ? 'var(--accent)' : 'white', border: 'none', padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s' }}
           >
             🎯 Hoje
           </button>
           <button 
             onClick={() => setSubTab('leaderboard')}
-            style={{ background: subTab === 'leaderboard' ? 'white' : 'rgba(255,255,255,0.2)', color: subTab === 'leaderboard' ? '#2563eb' : 'white', border: 'none', padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s' }}
+            style={{ background: subTab === 'leaderboard' ? 'white' : 'rgba(255,255,255,0.2)', color: subTab === 'leaderboard' ? 'var(--accent)' : 'white', border: 'none', padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s' }}
           >
             🏆 Ranking de Bravos
           </button>
@@ -188,7 +188,7 @@ export default function Missoes({ session }) {
       {subTab === 'diarios' && (
         <div className="card">
           <h3 style={{ margin: '0 0 12px 0', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Target size={20} color="#2563eb" /> Desafios de Hoje
+            <Target size={20} color="var(--accent)" /> Desafios de Hoje
           </h3>
           <p style={{ fontSize: '13px', color: 'var(--text-dim)', marginBottom: '20px' }}>
             Toda a casa tem as mesmas missões. Quem fizer primeiro, ganha o direito de se gabar.
@@ -219,7 +219,7 @@ export default function Missoes({ session }) {
                           className="btn-primary"
                           onClick={() => concluirDesafio(index)}
                           disabled={isLoading}
-                          style={{ background: '#2563eb', margin: 0, padding: '10px 15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '14px' }}
+                          style={{ margin: 0, padding: '10px 15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '14px' }}
                         >
                           <Zap size={18} /> {isLoading ? 'A confirmar...' : 'Completar Desafio'}
                         </button>
@@ -249,7 +249,7 @@ export default function Missoes({ session }) {
             </p>
           ) : (
             leaderboard.map((item, index) => (
-              <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', margin: '8px 0', background: index === 0 ? '#eff6ff' : '#f8fafc', borderRadius: '12px', border: index === 0 ? '2px solid #2563eb' : '1px solid #e2e8f0' }}>
+              <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', margin: '8px 0', background: index === 0 ? '#fef08a' : '#f8fafc', borderRadius: '12px', border: index === 0 ? '2px solid #eab308' : '1px solid #e2e8f0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span style={{ fontSize: '18px', fontWeight: 'bold', width: '25px', textAlign: 'center' }}>
                     {index === 0 ? '👑' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
@@ -258,7 +258,7 @@ export default function Missoes({ session }) {
                     @{item.username}
                   </span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: index === 0 ? '#2563eb' : '#64748b', color: 'white', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: index === 0 ? '#eab308' : 'var(--accent)', color: 'white', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '14px' }}>
                   <Target size={16} />
                   <span>{item.total} Pts</span>
                 </div>
