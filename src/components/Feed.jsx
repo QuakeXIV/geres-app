@@ -9,7 +9,8 @@ export default function Feed({ session }) {
   const [uploading, setUploading] = useState(false);
   const [commentText, setCommentText] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
+  const [postToDelete, setPostToDelete] = useState(null);
+
   // ESTADOS PARA EDITAR POSTS
   const [editingPostId, setEditingPostId] = useState(null);
   const [editCaptionText, setEditCaptionText] = useState('');
@@ -37,7 +38,7 @@ export default function Feed({ session }) {
 
   async function publicarPost(e) {
     e.preventDefault();
-    
+
     try {
       if (!file) {
         return showToast('Escolhe uma foto ou vídeo primeiro!', 'error');
@@ -78,7 +79,7 @@ export default function Feed({ session }) {
       setFile(null);
       setIsModalOpen(false);
       carregarPosts();
-      
+
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
@@ -87,15 +88,19 @@ export default function Feed({ session }) {
   }
 
   // APAGAR POST
-  async function apagarPost(postId) {
-    if (!window.confirm('Tens a certeza que queres apagar esta publicação?')) return;
+  function pedirParaApagar(postId) {
+    setPostToDelete(postId); // Abre a nossa janela customizada
+  }
 
+  async function confirmarApagarPost() {
+    const postId = postToDelete;
     const { error } = await supabase.from('posts').delete().eq('id', postId);
 
     if (error) {
       showToast(`Erro ao apagar: ${error.message}`, 'error');
     } else {
       showToast('Publicação apagada! 🗑️', 'success');
+      setPostToDelete(null); // Fecha a janela
       carregarPosts();
     }
   }
@@ -132,7 +137,7 @@ export default function Feed({ session }) {
     } else {
       await supabase.from('likes').insert([{ post_id: postId, user_id: session.user.id }]);
     }
-    
+
     carregarPosts();
   }
 
@@ -152,10 +157,10 @@ export default function Feed({ session }) {
 
   return (
     <div style={{ padding: '10px', paddingBottom: 'calc(130px + env(safe-area-inset-bottom))' }}>
-      
+
       {toast.show && (
-        <div 
-          className={`custom-toast ${toast.type === 'error' ? 'toast-error' : 'toast-success'}`} 
+        <div
+          className={`custom-toast ${toast.type === 'error' ? 'toast-error' : 'toast-success'}`}
           style={{ position: 'fixed', top: 'calc(60px + env(safe-area-inset-top))', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, width: '90%', maxWidth: '400px', boxShadow: '0 4px 15px rgba(0,0,0,0.3)' }}
         >
           {toast.message}
@@ -165,13 +170,13 @@ export default function Feed({ session }) {
       {/* JANELA DE NOVA PUBLICAÇÃO (MODAL) */}
       {isModalOpen && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', 
-          background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', 
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex',
           justifyContent: 'center', alignItems: 'center', padding: '20px', boxSizing: 'border-box'
         }}>
           <div className="card" style={{ width: '100%', maxWidth: '400px', margin: 0, position: 'relative' }}>
-            <button 
-              onClick={() => setIsModalOpen(false)} 
+            <button
+              onClick={() => setIsModalOpen(false)}
               style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer' }}
             >
               <X size={24} />
@@ -203,9 +208,9 @@ export default function Feed({ session }) {
 
       {/* FEED DE POSTS */}
       {posts.length === 0 ? (
-        <div style={{ 
-          textAlign: 'center', marginTop: '60px', padding: '30px 20px', 
-          background: 'rgba(255, 255, 255, 0.6)', borderRadius: '16px', 
+        <div style={{
+          textAlign: 'center', marginTop: '60px', padding: '30px 20px',
+          background: 'rgba(255, 255, 255, 0.6)', borderRadius: '16px',
           border: '2px dashed var(--accent)', backdropFilter: 'blur(5px)'
         }}>
           <span style={{ fontSize: '45px', display: 'block', marginBottom: '15px' }}>🏜️</span>
@@ -230,18 +235,18 @@ export default function Feed({ session }) {
                 {/* BOTÕES DE EDITAR E APAGAR (APENAS PARA O DONO DO POST) */}
                 {eMeuPost && (
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <button 
+                    <button
                       onClick={() => {
                         setEditingPostId(post.id);
                         setEditCaptionText(post.caption || '');
-                      }} 
+                      }}
                       style={{ background: '#f1f5f9', border: 'none', borderRadius: '6px', padding: '6px', cursor: 'pointer' }}
                       title="Editar legenda"
                     >
                       <Edit2 size={16} color="var(--text-dim)" />
                     </button>
-                    <button 
-                      onClick={() => apagarPost(post.id)} 
+                    <button
+                      onClick={() => pedirParaApagar(post.id)}
                       style={{ background: '#fee2e2', border: 'none', borderRadius: '6px', padding: '6px', cursor: 'pointer' }}
                       title="Apagar post"
                     >
@@ -267,13 +272,13 @@ export default function Feed({ session }) {
                     value={editCaptionText}
                     onChange={(e) => setEditCaptionText(e.target.value)}
                   />
-                  <button 
+                  <button
                     onClick={() => guardarEdicao(post.id)}
                     style={{ background: 'var(--accent)', border: 'none', borderRadius: '8px', padding: '0 12px', cursor: 'pointer' }}
                   >
                     <Check size={18} color="white" />
                   </button>
-                  <button 
+                  <button
                     onClick={() => setEditingPostId(null)}
                     style={{ background: '#cbd5e1', border: 'none', borderRadius: '8px', padding: '0 10px', cursor: 'pointer' }}
                   >
@@ -325,7 +330,7 @@ export default function Feed({ session }) {
       )}
 
       {/* BOTÃO FLUTUANTE DE "+" */}
-      <button 
+      <button
         onClick={() => setIsModalOpen(true)}
         style={{
           position: 'fixed', bottom: 'calc(100px + env(safe-area-inset-bottom))', right: '20px', width: '60px', height: '60px',
@@ -337,6 +342,39 @@ export default function Feed({ session }) {
       >
         <Plus size={32} />
       </button>
+
+      {/* MODAL DE CONFIRMAÇÃO CUSTOMIZADO */}
+      {postToDelete && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 9999,
+          display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px'
+        }}>
+          <div className="card" style={{ width: '100%', maxWidth: '320px', textAlign: 'center', margin: 0, padding: '25px 20px', animation: 'scaleIn 0.2s ease-out' }}>
+            <div style={{ background: '#fee2e2', width: '50px', height: '50px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px auto' }}>
+              <Trash2 size={24} color="#ef4444" />
+            </div>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '20px' }}>Apagar Publicação?</h3>
+            <p style={{ color: 'var(--text-dim)', fontSize: '14px', margin: '0 0 20px 0' }}>
+              Isto vai desaparecer para sempre do feed. Tens a certeza absoluta?
+            </p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button
+                onClick={() => setPostToDelete(null)}
+                style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', background: '#f1f5f9', color: 'var(--text)', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarApagarPost}
+                style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', background: '#ef4444', color: 'white', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.3)' }}
+              >
+                Sim, Apagar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
