@@ -4,7 +4,8 @@ import Auth from './components/Auth';
 import Feed from './components/Feed';
 import Tasca from './components/Tasca';
 import DisposableCamera from './components/DisposableCamera';
-import { Home, Beer, Camera, LogOut, Sun } from 'lucide-react';
+import Missoes from './components/Missoes';
+import { Home, Beer, Camera, LogOut, Sun, Target } from 'lucide-react';
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -31,7 +32,6 @@ export default function App() {
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
-        // Substitui a linha do padding no Header por estas 4:
         paddingTop: 'calc(15px + env(safe-area-inset-top))',
         paddingBottom: '15px',
         paddingLeft: '20px',
@@ -59,6 +59,7 @@ export default function App() {
       <div style={{ paddingBottom: '20px' }}>
         {tab === 'feed' && <Feed session={session} />}
         {tab === 'tasca' && <Tasca session={session} />}
+        {tab === 'missoes' && <Missoes session={session} />} {/* <-- ADICIONADO AQUI */}
         {tab === 'camera' && <DisposableCamera session={session} />}
       </div>
 
@@ -71,6 +72,11 @@ export default function App() {
         <button className={`nav-btn ${tab === 'tasca' ? 'active' : ''}`} onClick={() => setTab('tasca')}>
           <Beer size={24} />
           <span>Tasca</span>
+        </button>
+        {/* <-- BOTÃO DE MISSÕES ADICIONADO AQUI --> */}
+        <button className={`nav-btn ${tab === 'missoes' ? 'active' : ''}`} onClick={() => setTab('missoes')}>
+          <Target size={24} />
+          <span>Missões</span>
         </button>
         <button className={`nav-btn ${tab === 'camera' ? 'active' : ''}`} onClick={() => setTab('camera')}>
           <Camera size={24} />
