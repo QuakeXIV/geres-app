@@ -8,6 +8,7 @@ import Missoes from './components/Missoes';
 import Livro from './components/Livro';
 import Estatisticas from './components/Estatisticas';
 import Compras from './components/Compras';
+import Arena from './components/Arena'; // <-- IMPORT DA ARENA
 import { Home, Beer, Target, LayoutGrid, LogOut, Sun, BookOpen, BarChart3, ShoppingCart, Camera, Gamepad2, ChevronRight } from 'lucide-react';
 
 export default function App() {
@@ -28,7 +29,6 @@ export default function App() {
     return <Auth />;
   }
 
-  // Estilos da Navbar agora otimizados para 4 botões
   const navItemStyle = (isActive) => ({
     display: 'flex',
     alignItems: 'center',
@@ -45,7 +45,6 @@ export default function App() {
     fontSize: '14px'
   });
 
-  // Estilo dos cartões do Menu Hub
   const menuCardStyle = {
     background: 'white',
     borderRadius: '16px',
@@ -64,22 +63,13 @@ export default function App() {
 
   return (
     <div>
-      {/* CABEÇALHO LIMPO E MINIMALISTA */}
       <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        paddingTop: 'calc(15px + env(safe-area-inset-top))',
-        paddingBottom: '15px',
-        paddingLeft: '20px',
-        paddingRight: '20px', 
-        background: 'rgba(255, 255, 255, 0.85)', 
-        backdropFilter: 'blur(10px)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.5)',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        boxShadow: '0 4px 15px rgba(0,0,0,0.05)'
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+        paddingTop: 'calc(15px + env(safe-area-inset-top))', paddingBottom: '15px',
+        paddingLeft: '20px', paddingRight: '20px', 
+        background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(10px)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.5)', position: 'sticky',
+        top: 0, zIndex: 100, boxShadow: '0 4px 15px rgba(0,0,0,0.05)'
       }}>
         <h3 style={{ margin: 0, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Sun size={20} /> Gerês 2k26
@@ -94,25 +84,21 @@ export default function App() {
         </button>
       </div>
 
-      {/* ZONA DE CONTEÚDO */}
       <div style={{ paddingBottom: '110px' }}>
         {tab === 'feed' && <Feed session={session} />}
         {tab === 'tasca' && <Tasca session={session} />}
         {tab === 'missoes' && <Missoes session={session} />}
-        
-        {/* COMPONENTES ESCONDIDOS NO MENU */}
         {tab === 'livro' && <Livro session={session} />}
         {tab === 'stats' && <Estatisticas />}
         {tab === 'compras' && <Compras session={session} />}
         {tab === 'camera' && <DisposableCamera session={session} />}
+        {tab === 'arena' && <Arena session={session} />} {/* <-- ECRÃ DA ARENA */}
         
-        {/* ECRÃ DO MENU HUB */}
         {tab === 'menu' && (
           <div style={{ padding: '20px' }}>
             <h2 style={{ margin: '0 0 20px 0', color: '#0f172a', fontSize: '24px' }}>Descobrir</h2>
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-              
               <div style={menuCardStyle} onClick={() => setTab('livro')}>
                 <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
                   <BookOpen size={28} color="#d97706" />
@@ -152,15 +138,13 @@ export default function App() {
                   <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Descartável</p>
                 </div>
               </div>
-
             </div>
 
-            {/* ARENA DE JOGOS (Em construção, ocupando a largura toda) */}
             <h3 style={{ margin: '30px 0 15px 0', color: '#0f172a', fontSize: '18px' }}>Competição</h3>
             
             <div 
               style={{ ...menuCardStyle, flexDirection: 'row', justifyContent: 'space-between', padding: '20px', background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', border: 'none' }}
-              onClick={() => alert('Calma craque, a Arena está a ser construída! 🚧')}
+              onClick={() => setTab('arena')} /* <-- AGORA JÁ ABRE A ARENA */
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                 <div style={{ background: 'rgba(255,255,255,0.1)', padding: '12px', borderRadius: '12px' }}>
@@ -178,39 +162,27 @@ export default function App() {
         )}
       </div>
 
-      {/* NAVBAR FLUTUANTE PREMIUM (Limpa: 4 botões apenas) */}
+      {/* NAVBAR FLUTUANTE */}
       <div style={{
-        position: 'fixed',
-        bottom: 'max(20px, env(safe-area-inset-bottom))',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: '92%', 
-        maxWidth: '400px', /* Encurtei a barra porque tem menos botões */
-        background: 'rgba(255, 255, 255, 0.9)',
-        backdropFilter: 'blur(15px)',
-        WebkitBackdropFilter: 'blur(15px)',
-        borderRadius: '30px',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '8px 12px', 
-        zIndex: 1000,
-        border: '1px solid rgba(255,255,255,0.4)'
+        position: 'fixed', bottom: 'max(20px, env(safe-area-inset-bottom))', left: '50%', transform: 'translateX(-50%)',
+        width: '92%', maxWidth: '400px', background: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(15px)',
+        WebkitBackdropFilter: 'blur(15px)', borderRadius: '30px', boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', 
+        zIndex: 1000, border: '1px solid rgba(255,255,255,0.4)'
       }}>
-        <button style={navItemStyle(tab === 'feed')} onClick={() => setTab('feed')} title="Feed">
+        <button style={navItemStyle(tab === 'feed')} onClick={() => setTab('feed')}>
           <Home size={22} />
           {tab === 'feed' && <span>Feed</span>}
         </button>
-        <button style={navItemStyle(tab === 'tasca')} onClick={() => setTab('tasca')} title="Tasca">
+        <button style={navItemStyle(tab === 'tasca')} onClick={() => setTab('tasca')}>
           <Beer size={22} />
           {tab === 'tasca' && <span>Tasca</span>}
         </button>
-        <button style={navItemStyle(tab === 'missoes')} onClick={() => setTab('missoes')} title="Missões">
+        <button style={navItemStyle(tab === 'missoes')} onClick={() => setTab('missoes')}>
           <Target size={22} />
           {tab === 'missoes' && <span>Missões</span>}
         </button>
-        <button style={navItemStyle(tab === 'menu')} onClick={() => setTab('menu')} title="Menu">
+        <button style={navItemStyle(tab === 'menu')} onClick={() => setTab('menu')}>
           <LayoutGrid size={22} />
           {tab === 'menu' && <span>Menu</span>}
         </button>
