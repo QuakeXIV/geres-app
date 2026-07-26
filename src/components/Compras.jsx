@@ -107,7 +107,7 @@ export default function Compras({ session }) {
         {total > 0 && (
           <div style={{ marginTop: '15px', background: 'rgba(255,255,255,0.2)', padding: '10px', borderRadius: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>
-              <span>Progresso no Continente</span>
+              <span>Progresso no Inter-Marché</span>
               <span>{progresso}%</span>
             </div>
             <div style={{ width: '100%', height: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '4px', overflow: 'hidden' }}>
