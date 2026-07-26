@@ -6,7 +6,8 @@ import Tasca from './components/Tasca';
 import DisposableCamera from './components/DisposableCamera';
 import Missoes from './components/Missoes';
 import Livro from './components/Livro';
-import { Home, Beer, Camera, LogOut, Sun, Target, BookOpen } from 'lucide-react';
+import Estatisticas from './components/Estatisticas'; // <-- IMPORT NOVO
+import { Home, Beer, Camera, LogOut, Sun, Target, BookOpen, BarChart3 } from 'lucide-react';
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -30,8 +31,9 @@ export default function App() {
   const navItemStyle = (isActive) => ({
     display: 'flex',
     alignItems: 'center',
-    gap: '6px',
-    padding: isActive ? '10px 16px' : '10px',
+    justifyContent: 'center',
+    gap: isActive ? '4px' : '0', // Diminui o gap para caber tudo
+    padding: isActive ? '10px 14px' : '10px',
     borderRadius: '20px',
     background: isActive ? 'var(--accent)' : 'transparent',
     color: isActive ? 'white' : '#64748b',
@@ -39,7 +41,7 @@ export default function App() {
     cursor: 'pointer',
     transition: 'all 0.3s ease',
     fontWeight: 'bold',
-    fontSize: '14px'
+    fontSize: '12px' // Fonte ligeiramente menor
   });
 
   return (
@@ -73,53 +75,58 @@ export default function App() {
       </div>
 
       {/* Conteúdo */}
-      <div style={{ paddingBottom: '100px' }}> {/* Aumentei o padding para a navbar não tapar conteúdo */}
+      <div style={{ paddingBottom: '100px' }}>
         {tab === 'feed' && <Feed session={session} />}
         {tab === 'tasca' && <Tasca session={session} />}
         {tab === 'missoes' && <Missoes session={session} />}
         {tab === 'livro' && <Livro session={session} />}
+        {tab === 'stats' && <Estatisticas />} {/* <-- ABA NOVA */}
         {tab === 'camera' && <DisposableCamera session={session} />}
       </div>
 
-      {/* NAVBAR FLUTUANTE PREMIUM */}
+      {/* NAVBAR FLUTUANTE PREMIUM (Agora com 6 botões) */}
       <div style={{
         position: 'fixed',
         bottom: 'max(20px, env(safe-area-inset-bottom))',
         left: '50%',
         transform: 'translateX(-50%)',
-        width: '92%',
+        width: '95%', /* Um bocado mais largo para caberem os 6 */
         maxWidth: '500px',
         background: 'rgba(255, 255, 255, 0.9)',
         backdropFilter: 'blur(15px)',
-        WebkitBackdropFilter: 'blur(15px)', // Para iPhones
+        WebkitBackdropFilter: 'blur(15px)',
         borderRadius: '30px',
         boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '8px 12px',
+        padding: '6px 8px', /* Menos padding lateral interno */
         zIndex: 1000,
         border: '1px solid rgba(255,255,255,0.4)'
       }}>
-        <button style={navItemStyle(tab === 'feed')} onClick={() => setTab('feed')}>
-          <Home size={22} />
+        <button style={navItemStyle(tab === 'feed')} onClick={() => setTab('feed')} title="Feed">
+          <Home size={20} />
           {tab === 'feed' && <span>Feed</span>}
         </button>
-        <button style={navItemStyle(tab === 'tasca')} onClick={() => setTab('tasca')}>
-          <Beer size={22} />
+        <button style={navItemStyle(tab === 'tasca')} onClick={() => setTab('tasca')} title="Tasca">
+          <Beer size={20} />
           {tab === 'tasca' && <span>Tasca</span>}
         </button>
-        <button style={navItemStyle(tab === 'missoes')} onClick={() => setTab('missoes')}>
-          <Target size={22} />
+        <button style={navItemStyle(tab === 'missoes')} onClick={() => setTab('missoes')} title="Missões">
+          <Target size={20} />
           {tab === 'missoes' && <span>Missões</span>}
         </button>
-        <button style={navItemStyle(tab === 'livro')} onClick={() => setTab('livro')}>
-          <BookOpen size={22} />
+        <button style={navItemStyle(tab === 'livro')} onClick={() => setTab('livro')} title="Livro">
+          <BookOpen size={20} />
           {tab === 'livro' && <span>Livro</span>}
         </button>
-        <button style={navItemStyle(tab === 'camera')} onClick={() => setTab('camera')}>
-          <Camera size={22} />
-          {tab === 'camera' && <span>Câmara</span>}
+        <button style={navItemStyle(tab === 'stats')} onClick={() => setTab('stats')} title="Estatísticas">
+          <BarChart3 size={20} />
+          {tab === 'stats' && <span>Stats</span>}
+        </button>
+        <button style={navItemStyle(tab === 'camera')} onClick={() => setTab('camera')} title="Câmara">
+          <Camera size={20} />
+          {tab === 'camera' && <span>Foto</span>}
         </button>
       </div>
     </div>
