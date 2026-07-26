@@ -7,8 +7,8 @@ import DisposableCamera from './components/DisposableCamera';
 import Missoes from './components/Missoes';
 import Livro from './components/Livro';
 import Estatisticas from './components/Estatisticas';
-import Compras from './components/Compras'; // <-- IMPORT NOVO
-import { Home, Beer, Camera, LogOut, Sun, Target, BookOpen, BarChart3, ShoppingCart } from 'lucide-react'; // <-- IMPORT DO CARRINHO
+import Compras from './components/Compras';
+import { Home, Beer, Target, LayoutGrid, LogOut, Sun, BookOpen, BarChart3, ShoppingCart, Camera, Gamepad2, ChevronRight } from 'lucide-react';
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -28,25 +28,43 @@ export default function App() {
     return <Auth />;
   }
 
+  // Estilos da Navbar agora otimizados para 4 botões
   const navItemStyle = (isActive) => ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: isActive ? '4px' : '0',
-    padding: isActive ? '10px 14px' : '10px',
-    borderRadius: '20px',
+    gap: isActive ? '6px' : '0',
+    padding: isActive ? '12px 18px' : '12px',
+    borderRadius: '24px',
     background: isActive ? 'var(--accent)' : 'transparent',
     color: isActive ? 'white' : '#64748b',
     border: 'none',
     cursor: 'pointer',
-    transition: 'all 0.3s ease',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
     fontWeight: 'bold',
-    fontSize: '12px'
+    fontSize: '14px'
   });
+
+  // Estilo dos cartões do Menu Hub
+  const menuCardStyle = {
+    background: 'white',
+    borderRadius: '16px',
+    padding: '20px 15px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '10px',
+    boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
+    border: '1px solid #f1f5f9',
+    cursor: 'pointer',
+    transition: 'transform 0.2s',
+    textAlign: 'center'
+  };
 
   return (
     <div>
-      {/* Cabeçalho de Verão */}
+      {/* CABEÇALHO LIMPO E MINIMALISTA */}
       <div style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
@@ -67,45 +85,107 @@ export default function App() {
           <Sun size={20} /> Gerês 2k26
         </h3>
         
-        {/* BOTÕES DO CABEÇALHO (Carrinho + Sair) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <button
-            style={{ background: 'none', border: 'none', color: tab === 'compras' ? '#10b981' : 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-            onClick={() => setTab('compras')}
-            title="Lista de Compras"
-          >
-            <ShoppingCart size={22} />
-          </button>
-          
-          <button
-            style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-            onClick={() => supabase.auth.signOut()}
-            title="Sair"
-          >
-            <LogOut size={22} />
-          </button>
-        </div>
+        <button
+          style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+          onClick={() => supabase.auth.signOut()}
+          title="Sair"
+        >
+          <LogOut size={22} />
+        </button>
       </div>
 
-      {/* Conteúdo */}
-      <div style={{ paddingBottom: '100px' }}>
+      {/* ZONA DE CONTEÚDO */}
+      <div style={{ paddingBottom: '110px' }}>
         {tab === 'feed' && <Feed session={session} />}
         {tab === 'tasca' && <Tasca session={session} />}
         {tab === 'missoes' && <Missoes session={session} />}
+        
+        {/* COMPONENTES ESCONDIDOS NO MENU */}
         {tab === 'livro' && <Livro session={session} />}
         {tab === 'stats' && <Estatisticas />}
-        {tab === 'compras' && <Compras session={session} />} {/* <-- ABA NOVA */}
+        {tab === 'compras' && <Compras session={session} />}
         {tab === 'camera' && <DisposableCamera session={session} />}
+        
+        {/* ECRÃ DO MENU HUB */}
+        {tab === 'menu' && (
+          <div style={{ padding: '20px' }}>
+            <h2 style={{ margin: '0 0 20px 0', color: '#0f172a', fontSize: '24px' }}>Descobrir</h2>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              
+              <div style={menuCardStyle} onClick={() => setTab('livro')}>
+                <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
+                  <BookOpen size={28} color="#d97706" />
+                </div>
+                <div>
+                  <h4 style={{ margin: '0 0 4px 0', color: '#0f172a', fontSize: '15px' }}>O Livro</h4>
+                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Frases míticas</p>
+                </div>
+              </div>
+
+              <div style={menuCardStyle} onClick={() => setTab('compras')}>
+                <div style={{ background: '#d1fae5', padding: '12px', borderRadius: '50%' }}>
+                  <ShoppingCart size={28} color="#10b981" />
+                </div>
+                <div>
+                  <h4 style={{ margin: '0 0 4px 0', color: '#0f172a', fontSize: '15px' }}>Radar da Fome</h4>
+                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Lista de compras</p>
+                </div>
+              </div>
+
+              <div style={menuCardStyle} onClick={() => setTab('stats')}>
+                <div style={{ background: '#e0e7ff', padding: '12px', borderRadius: '50%' }}>
+                  <BarChart3 size={28} color="#4f46e5" />
+                </div>
+                <div>
+                  <h4 style={{ margin: '0 0 4px 0', color: '#0f172a', fontSize: '15px' }}>Estatísticas</h4>
+                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Gerês Wrapped</p>
+                </div>
+              </div>
+
+              <div style={menuCardStyle} onClick={() => setTab('camera')}>
+                <div style={{ background: '#fce7f3', padding: '12px', borderRadius: '50%' }}>
+                  <Camera size={28} color="#db2777" />
+                </div>
+                <div>
+                  <h4 style={{ margin: '0 0 4px 0', color: '#0f172a', fontSize: '15px' }}>Câmara</h4>
+                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Descartável</p>
+                </div>
+              </div>
+
+            </div>
+
+            {/* ARENA DE JOGOS (Em construção, ocupando a largura toda) */}
+            <h3 style={{ margin: '30px 0 15px 0', color: '#0f172a', fontSize: '18px' }}>Competição</h3>
+            
+            <div 
+              style={{ ...menuCardStyle, flexDirection: 'row', justifyContent: 'space-between', padding: '20px', background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', border: 'none' }}
+              onClick={() => alert('Calma craque, a Arena está a ser construída! 🚧')}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <div style={{ background: 'rgba(255,255,255,0.1)', padding: '12px', borderRadius: '12px' }}>
+                  <Gamepad2 size={28} color="#38bdf8" />
+                </div>
+                <div style={{ textAlign: 'left' }}>
+                  <h4 style={{ margin: '0 0 4px 0', color: 'white', fontSize: '16px' }}>Arena de Jogos</h4>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>Torneios e Marcadores</p>
+                </div>
+              </div>
+              <ChevronRight size={24} color="#64748b" />
+            </div>
+
+          </div>
+        )}
       </div>
 
-      {/* NAVBAR FLUTUANTE PREMIUM */}
+      {/* NAVBAR FLUTUANTE PREMIUM (Limpa: 4 botões apenas) */}
       <div style={{
         position: 'fixed',
         bottom: 'max(20px, env(safe-area-inset-bottom))',
         left: '50%',
         transform: 'translateX(-50%)',
-        width: '95%', 
-        maxWidth: '500px',
+        width: '92%', 
+        maxWidth: '400px', /* Encurtei a barra porque tem menos botões */
         background: 'rgba(255, 255, 255, 0.9)',
         backdropFilter: 'blur(15px)',
         WebkitBackdropFilter: 'blur(15px)',
@@ -114,33 +194,25 @@ export default function App() {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '6px 8px', 
+        padding: '8px 12px', 
         zIndex: 1000,
         border: '1px solid rgba(255,255,255,0.4)'
       }}>
         <button style={navItemStyle(tab === 'feed')} onClick={() => setTab('feed')} title="Feed">
-          <Home size={20} />
+          <Home size={22} />
           {tab === 'feed' && <span>Feed</span>}
         </button>
         <button style={navItemStyle(tab === 'tasca')} onClick={() => setTab('tasca')} title="Tasca">
-          <Beer size={20} />
+          <Beer size={22} />
           {tab === 'tasca' && <span>Tasca</span>}
         </button>
         <button style={navItemStyle(tab === 'missoes')} onClick={() => setTab('missoes')} title="Missões">
-          <Target size={20} />
+          <Target size={22} />
           {tab === 'missoes' && <span>Missões</span>}
         </button>
-        <button style={navItemStyle(tab === 'livro')} onClick={() => setTab('livro')} title="Livro">
-          <BookOpen size={20} />
-          {tab === 'livro' && <span>Livro</span>}
-        </button>
-        <button style={navItemStyle(tab === 'stats')} onClick={() => setTab('stats')} title="Estatísticas">
-          <BarChart3 size={20} />
-          {tab === 'stats' && <span>Stats</span>}
-        </button>
-        <button style={navItemStyle(tab === 'camera')} onClick={() => setTab('camera')} title="Câmara">
-          <Camera size={20} />
-          {tab === 'camera' && <span>Foto</span>}
+        <button style={navItemStyle(tab === 'menu')} onClick={() => setTab('menu')} title="Menu">
+          <LayoutGrid size={22} />
+          {tab === 'menu' && <span>Menu</span>}
         </button>
       </div>
     </div>
