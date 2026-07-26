@@ -18,19 +18,31 @@ export default function Compras({ session }) {
   }, []);
 
   async function carregarLista() {
+    // 1. Puxar apenas a lista de compras (sem o join manhoso que estava a dar erro)
     const { data: listData, error } = await supabase
       .from('shopping_list')
-      .select('*, profiles(username)')
+      .select('*')
       .order('is_bought', { ascending: true }) // Os não comprados ficam em cima
       .order('created_at', { ascending: false });
 
-    if (!error) {
-      const itemsComPerfis = (listData || []).map(item => ({
-        ...item,
-        profiles: item.profiles || { username: 'Anónimo' }
-      }));
-      setItems(itemsComPerfis);
+    if (error) {
+      console.error("Erro ao puxar compras:", error);
+      return;
     }
+
+    // 2. Puxar os perfis à parte
+    const { data: profilesData } = await supabase.from('profiles').select('id, username');
+
+    // 3. Cruzar os dados à mão (o método que não falha)
+    const itemsComPerfis = (listData || []).map(item => {
+      const perfil = (profilesData || []).find(p => p.id === item.user_id);
+      return {
+        ...item,
+        profiles: perfil || { username: 'Anónimo' }
+      };
+    });
+    
+    setItems(itemsComPerfis);
   }
 
   async function adicionarItem(e) {
