@@ -162,12 +162,20 @@ export default function Livro({ session }) {
         )}
       </div>
 
-      {/* MODAL DE CONFIRMAÇÃO CUSTOMIZADO */}
+     {/* MODAL DE CONFIRMAÇÃO CUSTOMIZADO CORRIGIDO */}
       {quoteToDelete && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', 
-          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 9999, 
-          display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px'
+          position: 'fixed', 
+          top: 0, left: 0, right: 0, bottom: 0, /* Prende a todos os cantos do ecrã */
+          background: 'rgba(0,0,0,0.6)', 
+          backdropFilter: 'blur(5px)', 
+          WebkitBackdropFilter: 'blur(5px)', /* Suporte extra para iPhone */
+          zIndex: 99999, 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          padding: '20px',
+          boxSizing: 'border-box' /* Impede que margens estraguem o flex */
         }}>
           <div className="card" style={{ width: '100%', maxWidth: '320px', textAlign: 'center', margin: 0, padding: '25px 20px', animation: 'scaleIn 0.2s ease-out' }}>
             <div style={{ background: '#fef3c7', width: '50px', height: '50px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px auto' }}>

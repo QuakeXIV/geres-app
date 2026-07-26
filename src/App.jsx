@@ -26,6 +26,22 @@ export default function App() {
     return <Auth />;
   }
 
+  // Estilos da Navbar para ficar moderna
+  const navItemStyle = (isActive) => ({
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: isActive ? '10px 16px' : '10px',
+    borderRadius: '20px',
+    background: isActive ? 'var(--accent)' : 'transparent',
+    color: isActive ? 'white' : '#64748b',
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    fontWeight: 'bold',
+    fontSize: '14px'
+  });
+
   return (
     <div>
       {/* Cabeçalho de Verão */}
@@ -57,7 +73,7 @@ export default function App() {
       </div>
 
       {/* Conteúdo */}
-      <div style={{ paddingBottom: '20px' }}>
+      <div style={{ paddingBottom: '100px' }}> {/* Aumentei o padding para a navbar não tapar conteúdo */}
         {tab === 'feed' && <Feed session={session} />}
         {tab === 'tasca' && <Tasca session={session} />}
         {tab === 'missoes' && <Missoes session={session} />}
@@ -65,27 +81,45 @@ export default function App() {
         {tab === 'camera' && <DisposableCamera session={session} />}
       </div>
 
-      {/* Barra de Navegação Inferior (5 Botões) */}
-      <div className="navbar">
-        <button className={`nav-btn ${tab === 'feed' ? 'active' : ''}`} onClick={() => setTab('feed')}>
-          <Home size={24} />
-          <span>Feed</span>
+      {/* NAVBAR FLUTUANTE PREMIUM */}
+      <div style={{
+        position: 'fixed',
+        bottom: 'max(20px, env(safe-area-inset-bottom))',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: '92%',
+        maxWidth: '500px',
+        background: 'rgba(255, 255, 255, 0.9)',
+        backdropFilter: 'blur(15px)',
+        WebkitBackdropFilter: 'blur(15px)', // Para iPhones
+        borderRadius: '30px',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '8px 12px',
+        zIndex: 1000,
+        border: '1px solid rgba(255,255,255,0.4)'
+      }}>
+        <button style={navItemStyle(tab === 'feed')} onClick={() => setTab('feed')}>
+          <Home size={22} />
+          {tab === 'feed' && <span>Feed</span>}
         </button>
-        <button className={`nav-btn ${tab === 'tasca' ? 'active' : ''}`} onClick={() => setTab('tasca')}>
-          <Beer size={24} />
-          <span>Tasca</span>
+        <button style={navItemStyle(tab === 'tasca')} onClick={() => setTab('tasca')}>
+          <Beer size={22} />
+          {tab === 'tasca' && <span>Tasca</span>}
         </button>
-        <button className={`nav-btn ${tab === 'missoes' ? 'active' : ''}`} onClick={() => setTab('missoes')}>
-          <Target size={24} />
-          <span>Missões</span>
+        <button style={navItemStyle(tab === 'missoes')} onClick={() => setTab('missoes')}>
+          <Target size={22} />
+          {tab === 'missoes' && <span>Missões</span>}
         </button>
-        <button className={`nav-btn ${tab === 'livro' ? 'active' : ''}`} onClick={() => setTab('livro')}>
-          <BookOpen size={24} />
-          <span>Livro</span>
+        <button style={navItemStyle(tab === 'livro')} onClick={() => setTab('livro')}>
+          <BookOpen size={22} />
+          {tab === 'livro' && <span>Livro</span>}
         </button>
-        <button className={`nav-btn ${tab === 'camera' ? 'active' : ''}`} onClick={() => setTab('camera')}>
-          <Camera size={24} />
-          <span>Câmara</span>
+        <button style={navItemStyle(tab === 'camera')} onClick={() => setTab('camera')}>
+          <Camera size={22} />
+          {tab === 'camera' && <span>Câmara</span>}
         </button>
       </div>
     </div>
