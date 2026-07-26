@@ -5,7 +5,8 @@ import Feed from './components/Feed';
 import Tasca from './components/Tasca';
 import DisposableCamera from './components/DisposableCamera';
 import Missoes from './components/Missoes';
-import { Home, Beer, Camera, LogOut, Sun, Target } from 'lucide-react';
+import Livro from './components/Livro';
+import { Home, Beer, Camera, LogOut, Sun, Target, BookOpen } from 'lucide-react';
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -59,11 +60,12 @@ export default function App() {
       <div style={{ paddingBottom: '20px' }}>
         {tab === 'feed' && <Feed session={session} />}
         {tab === 'tasca' && <Tasca session={session} />}
-        {tab === 'missoes' && <Missoes session={session} />} {/* <-- ADICIONADO AQUI */}
+        {tab === 'missoes' && <Missoes session={session} />}
+        {tab === 'livro' && <Livro session={session} />}
         {tab === 'camera' && <DisposableCamera session={session} />}
       </div>
 
-      {/* Barra de Navegação Inferior */}
+      {/* Barra de Navegação Inferior (5 Botões) */}
       <div className="navbar">
         <button className={`nav-btn ${tab === 'feed' ? 'active' : ''}`} onClick={() => setTab('feed')}>
           <Home size={24} />
@@ -73,10 +75,13 @@ export default function App() {
           <Beer size={24} />
           <span>Tasca</span>
         </button>
-        {/* <-- BOTÃO DE MISSÕES ADICIONADO AQUI --> */}
         <button className={`nav-btn ${tab === 'missoes' ? 'active' : ''}`} onClick={() => setTab('missoes')}>
           <Target size={24} />
           <span>Missões</span>
+        </button>
+        <button className={`nav-btn ${tab === 'livro' ? 'active' : ''}`} onClick={() => setTab('livro')}>
+          <BookOpen size={24} />
+          <span>Livro</span>
         </button>
         <button className={`nav-btn ${tab === 'camera' ? 'active' : ''}`} onClick={() => setTab('camera')}>
           <Camera size={24} />
