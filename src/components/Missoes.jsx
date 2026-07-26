@@ -31,7 +31,7 @@ export default function Missoes({ session }) {
     "Fazer 15 flexões ou beber um shot de castigo.",
     "Falar com sotaque açoriano ou brasileiro durante 10 minutos.",
     "Esconder o isqueiro de alguém e deixá-lo à procura por 5 minutos.",
-    "Ficar sem dizer a palavra 'beber' ou 'álcool' durante 1 hora.",
+    "Ficar sem dizer a palavra 'beber' ou 'álcool' durante o dia.",
     "Cantar o refrão de uma música pimba aos berros.",
     "Trocar uma peça de roupa com a pessoa à tua direita.",
     "Tirar uma selfie a fingir que estás a dormir e meter no Feed.",

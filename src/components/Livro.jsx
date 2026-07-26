@@ -9,7 +9,6 @@ export default function Livro({ session }) {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   
-  // NOVO ESTADO PARA O MODAL
   const [quoteToDelete, setQuoteToDelete] = useState(null);
 
   function showToast(message, type = 'success') {
@@ -64,14 +63,13 @@ export default function Livro({ session }) {
     setLoading(false);
   }
 
-  // NOVA FUNÇÃO PARA CONFIRMAR O APAGAR
   async function confirmarApagarOcorrencia() {
     if (!quoteToDelete) return;
     
     const { error } = await supabase.from('tasca_quotes').delete().eq('id', quoteToDelete);
     if (!error) {
       showToast('Ocorrência apagada!', 'success');
-      setQuoteToDelete(null); // Fecha o modal
+      setQuoteToDelete(null); 
       await carregarQuotes();
     } else {
       showToast(`Erro: ${error.message}`, 'error');
@@ -87,8 +85,8 @@ export default function Livro({ session }) {
         </div>
       )}
 
-      {/* CABEÇALHO */}
-      <div className="card" style={{ textAlign: 'center', background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)', color: 'white' }}>
+      {/* CABEÇALHO COM O GRADIENTE OFICIAL */}
+      <div className="card" style={{ textAlign: 'center', background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', color: 'white' }}>
         <h2 style={{ margin: '0 0 5px 0', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
           <BookOpen size={26} /> Livro de Ocorrências
         </h2>
@@ -98,7 +96,7 @@ export default function Livro({ session }) {
       {/* FORMULÁRIO */}
       <div className="card">
         <h3 style={{ margin: '0 0 12px 0', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <PenTool size={20} color="#d97706" /> Registar Pérola
+          <PenTool size={20} color="var(--accent)" /> Registar Pérola
         </h3>
         <p style={{ fontSize: '13px', color: 'var(--text-dim)', marginBottom: '15px' }}>
           Alguém disse uma barbaridade? Regista para a posteridade.
@@ -121,7 +119,7 @@ export default function Livro({ session }) {
             onChange={(e) => setAutorCitacao(e.target.value)}
             required
           />
-          <button className="btn-primary" disabled={loading} style={{ background: '#d97706', width: '100%' }}>
+          <button className="btn-primary" disabled={loading} style={{ background: 'var(--accent)', width: '100%' }}>
             {loading ? 'A registar...' : 'Eternizar no Livro'}
           </button>
         </form>
@@ -130,7 +128,7 @@ export default function Livro({ session }) {
       {/* LISTA DE CITAÇÕES */}
       <div className="card">
         <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <MessageSquareQuote size={20} color="#d97706" /> O Livro Sagrado
+          <MessageSquareQuote size={20} color="var(--accent)" /> O Livro Sagrado
         </h3>
         {quotes.length === 0 ? (
           <p style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '14px' }}>
@@ -139,18 +137,17 @@ export default function Livro({ session }) {
         ) : (
           quotes.map((quote) => (
             <div key={quote.id} style={{ position: 'relative', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '20px', marginBottom: '15px', boxShadow: '2px 4px 10px rgba(0,0,0,0.05)' }}>
-              <MessageSquareQuote size={24} color="#f59e0b" style={{ position: 'absolute', top: '15px', right: '15px', opacity: 0.3 }} />
+              <MessageSquareQuote size={24} color="#fcd34d" style={{ position: 'absolute', top: '15px', right: '15px', opacity: 0.4 }} />
               <p style={{ margin: '0 0 15px 0', fontSize: '16px', fontStyle: 'italic', fontWeight: '500', color: '#451a03', lineHeight: '1.4' }}>
                 "{quote.quote}"
               </p>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <div>
-                  <span style={{ fontWeight: 'bold', color: '#b45309', fontSize: '14px' }}>— {quote.author}</span>
-                  <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#92400e' }}>
+                  <span style={{ fontWeight: 'bold', color: 'var(--accent)', fontSize: '14px' }}>— {quote.author}</span>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'var(--text-dim)' }}>
                     Registado por @{quote.profiles?.username}
                   </p>
                 </div>
-                {/* ABRIR MODAL EM VEZ DE ALERT */}
                 {quote.user_id === session.user.id && (
                   <button onClick={() => setQuoteToDelete(quote.id)} style={{ background: '#fee2e2', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', zIndex: 10 }}>
                     <Trash2 size={16} color="#ef4444" />
@@ -162,26 +159,26 @@ export default function Livro({ session }) {
         )}
       </div>
 
-     {/* MODAL DE CONFIRMAÇÃO CUSTOMIZADO CORRIGIDO */}
+      {/* MODAL DE CONFIRMAÇÃO COM CORES OFICIAIS */}
       {quoteToDelete && (
         <div style={{
           position: 'fixed', 
-          top: 0, left: 0, right: 0, bottom: 0, /* Prende a todos os cantos do ecrã */
+          top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(0,0,0,0.6)', 
           backdropFilter: 'blur(5px)', 
-          WebkitBackdropFilter: 'blur(5px)', /* Suporte extra para iPhone */
+          WebkitBackdropFilter: 'blur(5px)', 
           zIndex: 99999, 
           display: 'flex', 
           justifyContent: 'center', 
           alignItems: 'center', 
           padding: '20px',
-          boxSizing: 'border-box' /* Impede que margens estraguem o flex */
+          boxSizing: 'border-box'
         }}>
           <div className="card" style={{ width: '100%', maxWidth: '320px', textAlign: 'center', margin: 0, padding: '25px 20px', animation: 'scaleIn 0.2s ease-out' }}>
-            <div style={{ background: '#fef3c7', width: '50px', height: '50px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px auto' }}>
-              <Trash2 size={24} color="#d97706" />
+            <div style={{ background: '#ffedd5', width: '50px', height: '50px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px auto' }}>
+              <Trash2 size={24} color="var(--accent)" />
             </div>
-            <h3 style={{ margin: '0 0 10px 0', fontSize: '20px', color: '#92400e' }}>Apagar Pérola?</h3>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '20px', color: 'var(--accent)' }}>Apagar Pérola?</h3>
             <p style={{ color: 'var(--text-dim)', fontSize: '14px', margin: '0 0 20px 0' }}>
               Tens a certeza que queres apagar isto do Livro Sagrado? Não há volta a dar.
             </p>
