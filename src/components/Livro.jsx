@@ -19,12 +19,27 @@ export default function Livro({ session }) {
   }, []);
 
   async function carregarQuotes() {
+    // 1. Vai buscar as quotes (SEM o join automático que estava a dar erro)
     const { data: quotesData, error } = await supabase
       .from('tasca_quotes')
-      .select('*, profiles(username)')
+      .select('*')
       .order('created_at', { ascending: false });
 
-    if (!error) setQuotes(quotesData);
+    if (error) {
+      console.error("Erro a puxar o livro:", error);
+      return;
+    }
+
+    // 2. Vai buscar os perfis
+    const { data: profilesData } = await supabase.from('profiles').select('id, username');
+
+    // 3. Cruza os dados à mão (O método infalível)
+    const quotesComPerfis = (quotesData || []).map(quote => {
+      const perfil = (profilesData || []).find(p => p.id === quote.user_id);
+      return { ...quote, profiles: perfil || { username: 'Membro' } };
+    });
+
+    setQuotes(quotesComPerfis);
   }
 
   async function registarOcorrencia(e) {
