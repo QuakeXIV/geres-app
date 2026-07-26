@@ -8,6 +8,9 @@ export default function Livro({ session }) {
   const [autorCitacao, setAutorCitacao] = useState('');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
+  
+  // NOVO ESTADO PARA O MODAL
+  const [quoteToDelete, setQuoteToDelete] = useState(null);
 
   function showToast(message, type = 'success') {
     setToast({ show: true, message, type });
@@ -19,7 +22,6 @@ export default function Livro({ session }) {
   }, []);
 
   async function carregarQuotes() {
-    // 1. Vai buscar as quotes (SEM o join automático que estava a dar erro)
     const { data: quotesData, error } = await supabase
       .from('tasca_quotes')
       .select('*')
@@ -30,10 +32,8 @@ export default function Livro({ session }) {
       return;
     }
 
-    // 2. Vai buscar os perfis
     const { data: profilesData } = await supabase.from('profiles').select('id, username');
 
-    // 3. Cruza os dados à mão (O método infalível)
     const quotesComPerfis = (quotesData || []).map(quote => {
       const perfil = (profilesData || []).find(p => p.id === quote.user_id);
       return { ...quote, profiles: perfil || { username: 'Membro' } };
@@ -64,12 +64,17 @@ export default function Livro({ session }) {
     setLoading(false);
   }
 
-  async function apagarOcorrencia(quoteId) {
-    if (!window.confirm('Queres mesmo apagar esta pérola?')) return;
-    const { error } = await supabase.from('tasca_quotes').delete().eq('id', quoteId);
+  // NOVA FUNÇÃO PARA CONFIRMAR O APAGAR
+  async function confirmarApagarOcorrencia() {
+    if (!quoteToDelete) return;
+    
+    const { error } = await supabase.from('tasca_quotes').delete().eq('id', quoteToDelete);
     if (!error) {
       showToast('Ocorrência apagada!', 'success');
+      setQuoteToDelete(null); // Fecha o modal
       await carregarQuotes();
+    } else {
+      showToast(`Erro: ${error.message}`, 'error');
     }
   }
 
@@ -145,8 +150,9 @@ export default function Livro({ session }) {
                     Registado por @{quote.profiles?.username}
                   </p>
                 </div>
+                {/* ABRIR MODAL EM VEZ DE ALERT */}
                 {quote.user_id === session.user.id && (
-                  <button onClick={() => apagarOcorrencia(quote.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px' }}>
+                  <button onClick={() => setQuoteToDelete(quote.id)} style={{ background: '#fee2e2', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', zIndex: 10 }}>
                     <Trash2 size={16} color="#ef4444" />
                   </button>
                 )}
@@ -155,6 +161,39 @@ export default function Livro({ session }) {
           ))
         )}
       </div>
+
+      {/* MODAL DE CONFIRMAÇÃO CUSTOMIZADO */}
+      {quoteToDelete && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', 
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 9999, 
+          display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px'
+        }}>
+          <div className="card" style={{ width: '100%', maxWidth: '320px', textAlign: 'center', margin: 0, padding: '25px 20px', animation: 'scaleIn 0.2s ease-out' }}>
+            <div style={{ background: '#fef3c7', width: '50px', height: '50px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px auto' }}>
+              <Trash2 size={24} color="#d97706" />
+            </div>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '20px', color: '#92400e' }}>Apagar Pérola?</h3>
+            <p style={{ color: 'var(--text-dim)', fontSize: '14px', margin: '0 0 20px 0' }}>
+              Tens a certeza que queres apagar isto do Livro Sagrado? Não há volta a dar.
+            </p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button 
+                onClick={() => setQuoteToDelete(null)} 
+                style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', background: '#f1f5f9', color: 'var(--text)', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={confirmarApagarOcorrencia} 
+                style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', background: '#ef4444', color: 'white', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.3)' }}
+              >
+                Sim, Apagar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
