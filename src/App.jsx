@@ -6,8 +6,9 @@ import Tasca from './components/Tasca';
 import DisposableCamera from './components/DisposableCamera';
 import Missoes from './components/Missoes';
 import Livro from './components/Livro';
-import Estatisticas from './components/Estatisticas'; // <-- IMPORT NOVO
-import { Home, Beer, Camera, LogOut, Sun, Target, BookOpen, BarChart3 } from 'lucide-react';
+import Estatisticas from './components/Estatisticas';
+import Compras from './components/Compras'; // <-- IMPORT NOVO
+import { Home, Beer, Camera, LogOut, Sun, Target, BookOpen, BarChart3, ShoppingCart } from 'lucide-react'; // <-- IMPORT DO CARRINHO
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -27,12 +28,11 @@ export default function App() {
     return <Auth />;
   }
 
-  // Estilos da Navbar para ficar moderna
   const navItemStyle = (isActive) => ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: isActive ? '4px' : '0', // Diminui o gap para caber tudo
+    gap: isActive ? '4px' : '0',
     padding: isActive ? '10px 14px' : '10px',
     borderRadius: '20px',
     background: isActive ? 'var(--accent)' : 'transparent',
@@ -41,7 +41,7 @@ export default function App() {
     cursor: 'pointer',
     transition: 'all 0.3s ease',
     fontWeight: 'bold',
-    fontSize: '12px' // Fonte ligeiramente menor
+    fontSize: '12px'
   });
 
   return (
@@ -66,12 +66,25 @@ export default function App() {
         <h3 style={{ margin: 0, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Sun size={20} /> Gerês 2k26
         </h3>
-        <button
-          style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-          onClick={() => supabase.auth.signOut()}
-        >
-          <LogOut size={22} />
-        </button>
+        
+        {/* BOTÕES DO CABEÇALHO (Carrinho + Sair) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <button
+            style={{ background: 'none', border: 'none', color: tab === 'compras' ? '#10b981' : 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+            onClick={() => setTab('compras')}
+            title="Lista de Compras"
+          >
+            <ShoppingCart size={22} />
+          </button>
+          
+          <button
+            style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+            onClick={() => supabase.auth.signOut()}
+            title="Sair"
+          >
+            <LogOut size={22} />
+          </button>
+        </div>
       </div>
 
       {/* Conteúdo */}
@@ -80,17 +93,18 @@ export default function App() {
         {tab === 'tasca' && <Tasca session={session} />}
         {tab === 'missoes' && <Missoes session={session} />}
         {tab === 'livro' && <Livro session={session} />}
-        {tab === 'stats' && <Estatisticas />} {/* <-- ABA NOVA */}
+        {tab === 'stats' && <Estatisticas />}
+        {tab === 'compras' && <Compras session={session} />} {/* <-- ABA NOVA */}
         {tab === 'camera' && <DisposableCamera session={session} />}
       </div>
 
-      {/* NAVBAR FLUTUANTE PREMIUM (Agora com 6 botões) */}
+      {/* NAVBAR FLUTUANTE PREMIUM */}
       <div style={{
         position: 'fixed',
         bottom: 'max(20px, env(safe-area-inset-bottom))',
         left: '50%',
         transform: 'translateX(-50%)',
-        width: '95%', /* Um bocado mais largo para caberem os 6 */
+        width: '95%', 
         maxWidth: '500px',
         background: 'rgba(255, 255, 255, 0.9)',
         backdropFilter: 'blur(15px)',
@@ -100,7 +114,7 @@ export default function App() {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '6px 8px', /* Menos padding lateral interno */
+        padding: '6px 8px', 
         zIndex: 1000,
         border: '1px solid rgba(255,255,255,0.4)'
       }}>
