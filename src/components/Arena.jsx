@@ -80,6 +80,18 @@ export default function Arena({ session }) {
     });
   }
 
+  function pedirApagarJogo(id) {
+    setConfirmModal({
+      show: true, title: 'Apagar Jogo?', message: 'Este jogo e o seu resultado vão desaparecer para sempre.',
+      onConfirm: async () => {
+        await supabase.from('arena_games').delete().eq('id', id);
+        showToast('Jogo apagado!', 'success');
+        carregarJogos();
+        setConfirmModal({ show: false });
+      }
+    });
+  }
+
   async function carregarTorneios(showLoader = true) {
     if (showLoader) setLoading(true);
     const { data, error } = await supabase.from('arena_tournaments').select('*').order('status', { ascending: true }).order('created_at', { ascending: false });
@@ -217,9 +229,14 @@ export default function Arena({ session }) {
                       {game.status === 'live' ? <span style={{ width: '8px', height: '8px', background: '#ef4444', borderRadius: '50%', display: 'inline-block', animation: 'pulse 2s infinite' }}></span> : <Flag size={16} color="#64748b" />}
                       <span style={{ fontSize: '12px', fontWeight: 'bold', color: game.status === 'live' ? 'var(--accent)' : '#64748b', textTransform: 'uppercase' }}>{game.status === 'live' ? 'Em Direto' : 'Terminado'}</span>
                     </div>
-                    {game.status === 'live' && (
-                      <button onClick={() => pedirTerminarJogo(game.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}>Finalizar</button>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      {game.status === 'live' && (
+                        <button onClick={() => pedirTerminarJogo(game.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}>Finalizar</button>
+                      )}
+                      <button onClick={() => pedirApagarJogo(game.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}>
+                        <Trash2 size={16} color="#ef4444" opacity={game.status === 'live' ? 0.4 : 1} />
+                      </button>
+                    </div>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'stretch' }}>
                     <div style={{ flex: 1, padding: '20px', textAlign: 'center', borderRight: '1px solid #e2e8f0' }}>
