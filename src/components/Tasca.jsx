@@ -17,12 +17,12 @@ export default function Tasca({ session }) {
   }
 
   const [tabelaPutometros] = useState([
-    { id: 1, nome: 'Imperial / fino', putometro: 2, icone: '🍺' },
-    { id: 2, nome: 'Shot de Tequila', putometro: 5, icone: '🥃' },
-    { id: 3, nome: 'Copo de Vinho', putometro: 4, icone: '🍷' },
-    { id: 4, nome: 'Jarra de Sangria', putometro: 8, icone: '🍹' },
-    { id: 5, nome: 'Shot de Absinto', putometro: 10, icone: '☠️' },
-    { id: 6, nome: 'Garrafa de licor / Vodka', putometro: 25, icone: '🍾' },
+    { id: 1, nome: 'Fino/Mini/Lata', putometro: 1, icone: '🍺' },
+    { id: 2, nome: 'Shot de Vodka/Whisky', putometro: 1.5, icone: '🥃' },
+    { id: 3, nome: 'Copo de Sangria', putometro: 2.5, icone: '🍷' },
+    { id: 4, nome: 'Misturado Álcool + Sumo', putometro: 3, icone: '🍹' },
+    { id: 5, nome: 'Gin', putometro: 3, icone: '🍹' },
+    
   ]);
 
   useEffect(() => {
