@@ -29,8 +29,8 @@ export default function App() {
     });
   }, []);
 
+  // 1. INICIA O ONESIGNAL
   useEffect(() => {
-    // Se já arrancou, não faz de novo (proteção do React Strict Mode)
     if (oneSignalInitRef.current) return;
     oneSignalInitRef.current = true; 
 
@@ -43,8 +43,6 @@ export default function App() {
             enable: true, // Isto força o sininho a aparecer no canto inferior esquerdo
           },
         });
-        // Tenta pedir automaticamente (no Android costuma dar)
-        OneSignal.Slidedown.promptPush();
       } catch (error) {
         console.error("Erro ao iniciar OneSignal:", error);
       }
@@ -52,6 +50,17 @@ export default function App() {
     
     startOneSignal();
   }, []);
+
+  // 2. O TRUQUE DE MESTRE: DIZ AO ONESIGNAL QUEM É O UTILIZADOR
+  useEffect(() => {
+    if (session?.user?.id) {
+      try {
+        OneSignal.login(session.user.id);
+      } catch (e) {
+        console.log("OneSignal login erro:", e);
+      }
+    }
+  }, [session]);
 
   if (!session) {
     return <Auth />;
