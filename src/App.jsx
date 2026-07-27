@@ -8,7 +8,7 @@ import Missoes from './components/Missoes';
 import Livro from './components/Livro';
 import Estatisticas from './components/Estatisticas';
 import Compras from './components/Compras';
-import Arena from './components/Arena'; // <-- IMPORT DA ARENA
+import Arena from './components/Arena';
 import { Home, Beer, Target, LayoutGrid, LogOut, Sun, BookOpen, BarChart3, ShoppingCart, Camera, Gamepad2, ChevronRight } from 'lucide-react';
 
 export default function App() {
@@ -92,77 +92,76 @@ export default function App() {
         {tab === 'stats' && <Estatisticas />}
         {tab === 'compras' && <Compras session={session} />}
         {tab === 'camera' && <DisposableCamera session={session} />}
-        {tab === 'arena' && <Arena session={session} />} {/* <-- ECRÃ DA ARENA */}
+        {tab === 'arena' && <Arena session={session} />}
         
         {tab === 'menu' && (
           <div style={{ padding: '20px' }}>
-            <h2 style={{ margin: '0 0 20px 0', color: '#0f172a', fontSize: '24px' }}>Descobrir</h2>
+            <h2 style={{ margin: '0 0 20px 0', color: 'var(--text)', fontSize: '24px' }}>Descobrir</h2>
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
               <div style={menuCardStyle} onClick={() => setTab('livro')}>
                 <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
-                  <BookOpen size={28} color="#d97706" />
+                  <BookOpen size={28} color="var(--accent)" />
                 </div>
                 <div>
-                  <h4 style={{ margin: '0 0 4px 0', color: '#0f172a', fontSize: '15px' }}>O Livro</h4>
+                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>O Livro</h4>
                   <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Frases míticas</p>
                 </div>
               </div>
 
               <div style={menuCardStyle} onClick={() => setTab('compras')}>
-                <div style={{ background: '#d1fae5', padding: '12px', borderRadius: '50%' }}>
-                  <ShoppingCart size={28} color="#10b981" />
+                <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
+                  <ShoppingCart size={28} color="var(--accent)" />
                 </div>
                 <div>
-                  <h4 style={{ margin: '0 0 4px 0', color: '#0f172a', fontSize: '15px' }}>Radar da Fome</h4>
+                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>Radar da Fome</h4>
                   <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Lista de compras</p>
                 </div>
               </div>
 
               <div style={menuCardStyle} onClick={() => setTab('stats')}>
-                <div style={{ background: '#e0e7ff', padding: '12px', borderRadius: '50%' }}>
-                  <BarChart3 size={28} color="#4f46e5" />
+                <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
+                  <BarChart3 size={28} color="var(--accent)" />
                 </div>
                 <div>
-                  <h4 style={{ margin: '0 0 4px 0', color: '#0f172a', fontSize: '15px' }}>Estatísticas</h4>
+                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>Estatísticas</h4>
                   <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Gerês Wrapped</p>
                 </div>
               </div>
 
               <div style={menuCardStyle} onClick={() => setTab('camera')}>
-                <div style={{ background: '#fce7f3', padding: '12px', borderRadius: '50%' }}>
-                  <Camera size={28} color="#db2777" />
+                <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
+                  <Camera size={28} color="var(--accent)" />
                 </div>
                 <div>
-                  <h4 style={{ margin: '0 0 4px 0', color: '#0f172a', fontSize: '15px' }}>Câmara</h4>
+                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>Câmara</h4>
                   <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Descartável</p>
                 </div>
               </div>
             </div>
 
-            <h3 style={{ margin: '30px 0 15px 0', color: '#0f172a', fontSize: '18px' }}>Competição</h3>
+            <h3 style={{ margin: '30px 0 15px 0', color: 'var(--text)', fontSize: '18px' }}>Competição</h3>
             
             <div 
-              style={{ ...menuCardStyle, flexDirection: 'row', justifyContent: 'space-between', padding: '20px', background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', border: 'none' }}
-              onClick={() => setTab('arena')} /* <-- AGORA JÁ ABRE A ARENA */
+              style={{ ...menuCardStyle, flexDirection: 'row', justifyContent: 'space-between', padding: '20px', background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', border: 'none' }}
+              onClick={() => setTab('arena')}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                <div style={{ background: 'rgba(255,255,255,0.1)', padding: '12px', borderRadius: '12px' }}>
-                  <Gamepad2 size={28} color="#38bdf8" />
+                <div style={{ background: 'rgba(255,255,255,0.2)', padding: '12px', borderRadius: '12px' }}>
+                  <Gamepad2 size={28} color="white" />
                 </div>
                 <div style={{ textAlign: 'left' }}>
                   <h4 style={{ margin: '0 0 4px 0', color: 'white', fontSize: '16px' }}>Arena de Jogos</h4>
-                  <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>Torneios e Marcadores</p>
+                  <p style={{ margin: 0, fontSize: '12px', color: 'rgba(255,255,255,0.8)' }}>Torneios e Marcadores</p>
                 </div>
               </div>
-              <ChevronRight size={24} color="#64748b" />
+              <ChevronRight size={24} color="rgba(255,255,255,0.6)" />
             </div>
 
           </div>
         )}
       </div>
 
-      {/* NAVBAR FLUTUANTE */}
       <div style={{
         position: 'fixed', bottom: 'max(20px, env(safe-area-inset-bottom))', left: '50%', transform: 'translateX(-50%)',
         width: '92%', maxWidth: '400px', background: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(15px)',
