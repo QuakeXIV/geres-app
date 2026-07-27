@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
+import OneSignal from 'react-onesignal'; // <-- IMPORT DO ONESIGNAL
 import Auth from './components/Auth';
 import Feed from './components/Feed';
 import Tasca from './components/Tasca';
@@ -16,6 +17,7 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [tab, setTab] = useState('feed');
 
+  // --- 1. GESTÃO DE SESSÃO DO SUPABASE ---
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -25,6 +27,31 @@ export default function App() {
       setSession(session);
     });
   }, []);
+
+  // --- 2. INICIALIZAÇÃO DO ONESIGNAL ---
+  useEffect(() => {
+    async function setupOneSignal() {
+      try {
+        await OneSignal.init({
+          appId: "2505560e-8033-4528-997c-eca674fa3230", // O teu App ID da imagem!
+          allowLocalhostAsSecureOrigin: true, // Permite testares no pc sem problemas
+          notifyButton: {
+            enable: true, // Ativa um sininho flutuante caso a pessoa rejeite à primeira e queira ativar depois
+          },
+        });
+        
+        // Assim que inicializa, pede logo autorização ao utilizador
+        OneSignal.Slidedown.promptPush();
+      } catch (error) {
+        console.error("Erro ao iniciar o OneSignal:", error);
+      }
+    }
+    
+    // Só inicializa o OneSignal se houver sessão (se o gajo já fez login)
+    if (session) {
+      setupOneSignal();
+    }
+  }, [session]); // Executa sempre que a sessão muda
 
   if (!session) {
     return <Auth />;
@@ -187,8 +214,9 @@ export default function App() {
           {tab === 'menu' && <span>Menu</span>}
         </button>
       </div>
+
+      {/* Tutorial para quem não tem a app instalada ecrã principal */}
       <TutorialInstalacao />
     </div>
-    
   );
 }
