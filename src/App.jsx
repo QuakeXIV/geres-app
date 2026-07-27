@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabaseClient';
-import OneSignal from 'react-onesignal'; // <-- IMPORT DO ONESIGNAL
+import OneSignal from 'react-onesignal';
 import Auth from './components/Auth';
 import Feed from './components/Feed';
 import Tasca from './components/Tasca';
@@ -11,13 +11,14 @@ import Estatisticas from './components/Estatisticas';
 import Compras from './components/Compras';
 import Arena from './components/Arena';
 import TutorialInstalacao from './components/TutorialInstalacao';
-import { Home, Beer, Target, LayoutGrid, LogOut, Sun, BookOpen, BarChart3, ShoppingCart, Camera, Gamepad2, ChevronRight } from 'lucide-react';
+import PermissaoNotificacoes from './components/PermissaoNotificacoes';
+import { Home, Beer, Target, LayoutGrid, LogOut, Sun, BookOpen, BarChart3, ShoppingCart, Camera, Gamepad2, ChevronRight, Bell } from 'lucide-react';
 
 export default function App() {
   const [session, setSession] = useState(null);
   const [tab, setTab] = useState('feed');
+  const oneSignalInitRef = useRef(false); // <--- O SEGREDO PARA NÃO REBENTAR
 
-  // --- 1. GESTÃO DE SESSÃO DO SUPABASE ---
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -28,30 +29,29 @@ export default function App() {
     });
   }, []);
 
-  // --- 2. INICIALIZAÇÃO DO ONESIGNAL ---
   useEffect(() => {
-    async function setupOneSignal() {
+    // Se já arrancou, não faz de novo (proteção do React Strict Mode)
+    if (oneSignalInitRef.current) return;
+    oneSignalInitRef.current = true; 
+
+    async function startOneSignal() {
       try {
         await OneSignal.init({
-          appId: "2505560e-8033-4528-997c-eca674fa3230", // O teu App ID da imagem!
-          allowLocalhostAsSecureOrigin: true, // Permite testares no pc sem problemas
+          appId: "2505560e-8033-4528-997c-eca674fa3230",
+          allowLocalhostAsSecureOrigin: true,
           notifyButton: {
-            enable: true, // Ativa um sininho flutuante caso a pessoa rejeite à primeira e queira ativar depois
+            enable: true, // Isto força o sininho a aparecer no canto inferior esquerdo
           },
         });
-        
-        // Assim que inicializa, pede logo autorização ao utilizador
+        // Tenta pedir automaticamente (no Android costuma dar)
         OneSignal.Slidedown.promptPush();
       } catch (error) {
-        console.error("Erro ao iniciar o OneSignal:", error);
+        console.error("Erro ao iniciar OneSignal:", error);
       }
     }
     
-    // Só inicializa o OneSignal se houver sessão (se o gajo já fez login)
-    if (session) {
-      setupOneSignal();
-    }
-  }, [session]); // Executa sempre que a sessão muda
+    startOneSignal();
+  }, []);
 
   if (!session) {
     return <Auth />;
@@ -87,6 +87,11 @@ export default function App() {
     cursor: 'pointer',
     transition: 'transform 0.2s',
     textAlign: 'center'
+  };
+
+  // Função manual para forçar o pedido na Apple
+  const pedirNotificacoes = () => {
+    OneSignal.Slidedown.promptPush();
   };
 
   return (
@@ -127,6 +132,18 @@ export default function App() {
             <h2 style={{ margin: '0 0 20px 0', color: 'var(--text)', fontSize: '24px' }}>Descobrir</h2>
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              
+              {/* NOVO CARTÃO: ATIVAR NOTIFICAÇÕES */}
+              <div style={menuCardStyle} onClick={pedirNotificacoes}>
+                <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
+                  <Bell size={28} color="var(--accent)" />
+                </div>
+                <div>
+                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>Notificações</h4>
+                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Ativar Alertas</p>
+                </div>
+              </div>
+
               <div style={menuCardStyle} onClick={() => setTab('livro')}>
                 <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
                   <BookOpen size={28} color="var(--accent)" />
@@ -215,8 +232,8 @@ export default function App() {
         </button>
       </div>
 
-      {/* Tutorial para quem não tem a app instalada ecrã principal */}
       <TutorialInstalacao />
+      <PermissaoNotificacoes />
     </div>
   );
 }
