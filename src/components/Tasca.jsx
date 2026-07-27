@@ -17,12 +17,16 @@ export default function Tasca({ session }) {
   }
 
   const [tabelaPutometros] = useState([
-    { id: 1, nome: 'Fino/Mini/Lata', putometro: 1, icone: '🍺' },
-    { id: 2, nome: 'Shot de Vodka/Whisky', putometro: 1.5, icone: '🥃' },
-    { id: 3, nome: 'Copo de Sangria', putometro: 2.5, icone: '🍷' },
-    { id: 4, nome: 'Misturado Álcool + Sumo', putometro: 3, icone: '🍹' },
-    { id: 5, nome: 'Gin', putometro: 3, icone: '🍹' },
-    
+    { id: 1, nome: 'Mini', putometro: 1, icone: '🍺' },
+    { id: 2, nome: 'Lata', putometro: 1.5, icone: '🍺' },
+    { id: 3, nome: 'Shot de Vodka/Whisky', putometro: 1, icone: '🥃' },
+    { id: 4, nome: 'Shot de Licor', putometro: 0.5, icone: '🥃' },
+    { id: 5, nome: 'Copo de Sangria', putometro: 1.5, icone: '🍷' },
+    { id: 6, nome: 'Misturado Álcool + Sumo', putometro: 2.5, icone: '🍹' },
+    { id: 7, nome: 'Gin', putometro: 5, icone: '🍹' },
+    { id: 8, nome: 'Copo de vinho', putometro: 2, icone: '🍹' },
+    { id: 9, nome: 'Fino + Favaios', putometro: 1.5, icone: '🍹' },
+
   ]);
 
   useEffect(() => {
@@ -66,11 +70,11 @@ export default function Tasca({ session }) {
 
     registos.forEach((registo) => {
       const username = registo.profiles?.username || 'Membro do Grupo';
-      
+
       const bebidaInfo = tabelaPutometros.find(
         b => b.nome.trim().toLowerCase() === registo.drink_name.trim().toLowerCase()
       );
-      
+
       const valorPutometro = bebidaInfo ? bebidaInfo.putometro : 2;
       const totalGanha = valorPutometro * (registo.quantity || 1);
 
@@ -125,7 +129,7 @@ export default function Tasca({ session }) {
 
   return (
     <div style={{ padding: '10px', paddingBottom: 'calc(130px + env(safe-area-inset-bottom))' }}>
-      
+
       {toast.show && (
         <div className={`custom-toast ${toast.type === 'error' ? 'toast-error' : 'toast-success'}`} style={{ position: 'fixed', top: 'calc(60px + env(safe-area-inset-top))', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, width: '90%', maxWidth: '400px' }}>
           {toast.message}
@@ -135,15 +139,15 @@ export default function Tasca({ session }) {
       <div className="card" style={{ textAlign: 'center', background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', color: 'white' }}>
         <h2 style={{ margin: '0 0 5px 0' }}>🍻 Tasca do Gerês</h2>
         <p style={{ margin: 0, fontSize: '14px', opacity: 0.9 }}>Medidor oficial de estragos hepáticos</p>
-        
+
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '15px' }}>
-          <button 
+          <button
             onClick={() => setSubTab('leaderboard')}
             style={{ background: subTab === 'leaderboard' ? 'white' : 'rgba(255,255,255,0.2)', color: subTab === 'leaderboard' ? 'var(--accent)' : 'white', border: 'none', padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' }}
           >
             🏆 Leaderboard
           </button>
-          <button 
+          <button
             onClick={() => setSubTab('putometros')}
             style={{ background: subTab === 'putometros' ? 'white' : 'rgba(255,255,255,0.2)', color: subTab === 'putometros' ? 'var(--accent)' : 'white', border: 'none', padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' }}
           >
@@ -234,7 +238,7 @@ export default function Tasca({ session }) {
                     </p>
                   </div>
                   {/* Botão para apagar este registo específico */}
-                  <button 
+                  <button
                     onClick={() => apagarConsumo(drink.id)}
                     style={{ background: '#fee2e2', border: 'none', borderRadius: '8px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >
