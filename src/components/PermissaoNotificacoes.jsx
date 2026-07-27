@@ -3,21 +3,26 @@ import OneSignal from 'react-onesignal';
 import { BellRing, AlertTriangle } from 'lucide-react';
 
 export default function PermissaoNotificacoes() {
-  const [permission, setPermission] = useState('granted'); // Assume granted por defeito para não piscar
+  const [permission, setPermission] = useState('granted'); // Assume 'granted' para não piscar logo
   const [isStandalone, setIsStandalone] = useState(false);
+  const [forceHide, setForceHide] = useState(false); // Botão de emergência
 
   useEffect(() => {
-    // 1. Verifica se a pessoa já instalou a app (não queremos chatear quem está no Safari/Chrome normal, porque no iPhone as notificações nem funcionam lá)
+    // 1. Verifica se está no ecrã principal
     const checkStandalone = window.matchMedia('(display-mode: standalone)').matches 
                          || window.navigator.standalone === true;
     setIsStandalone(checkStandalone);
 
-    // 2. Verifica o estado atual das notificações do telemóvel
-    if ("Notification" in window) {
-      setPermission(Notification.permission);
+    // 2. Se o telemóvel for antigo e não suportar notificações de todo, escondemos logo
+    if (!("Notification" in window)) {
+      setPermission('denied');
+      return;
     }
 
-    // 3. Cria um "espião" para atualizar o ecrã mal a pessoa clique em "Permitir" no pop-up do telemóvel
+    // 3. Vê o estado atual
+    setPermission(Notification.permission);
+
+    // 4. Espião para quando ele aceitar o ecrã sumir
     const interval = setInterval(() => {
       if ("Notification" in window) {
         setPermission(Notification.permission);
@@ -27,13 +32,28 @@ export default function PermissaoNotificacoes() {
     return () => clearInterval(interval);
   }, []);
 
-  // Se a pessoa já permitiu, ou se já negou permanentemente, ou se não está na app instalada, não mostramos nada.
-  // Só queremos chatear quem está no estado 'default' (ainda não respondeu).
-  if (!isStandalone || permission !== 'default') return null;
+  // Se já deu permissão, ou se negou, ou se ativou o botão de emergência, desaparece
+  if (!isStandalone || permission !== 'default' || forceHide) return null;
 
-  const pedirPermissao = () => {
-    // Chama o OneSignal para disparar o pop-up nativo do telemóvel
-    OneSignal.Slidedown.promptPush();
+  const pedirPermissao = async () => {
+    try {
+      // 1. Manda o comando NATIVO para o telemóvel (Isto obriga o pop-up do iPhone/Android a aparecer na hora)
+      if ("Notification" in window) {
+        const perm = await window.Notification.requestPermission();
+        setPermission(perm);
+      }
+      
+      // 2. Avisa o OneSignal para registar o telemóvel (Nova API v16)
+      if (OneSignal.Notifications) {
+        await OneSignal.Notifications.requestPermission();
+      } else if (OneSignal.Slidedown) {
+        OneSignal.Slidedown.promptPush();
+      }
+    } catch (error) {
+      console.error("Erro ao pedir permissão:", error);
+      // Se a Apple bloquear ou der erro, esconde o modal para a pessoa poder usar a app
+      setForceHide(true); 
+    }
   };
 
   return (
@@ -54,7 +74,7 @@ export default function PermissaoNotificacoes() {
           O Tribunal precisa de te avisar quando tens de beber um shot ou quando há um jogo novo na Arena. 
         </p>
         
-        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '15px', marginBottom: '25px', display: 'flex', gap: '10px', alignItems: 'center', textAlign: 'left' }}>
+        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '15px', marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center', textAlign: 'left' }}>
           <AlertTriangle size={24} color="#ef4444" style={{ flexShrink: 0 }} />
           <p style={{ margin: 0, fontSize: '12px', color: '#991b1b' }}>
             No próximo ecrã, clica obrigatoriamente em <b>"Permitir"</b>, senão ficas de fora da brincadeira.
@@ -63,9 +83,17 @@ export default function PermissaoNotificacoes() {
 
         <button 
           onClick={pedirPermissao}
-          style={{ width: '100%', padding: '15px', borderRadius: '12px', border: 'none', background: 'var(--accent)', color: 'white', fontWeight: '900', fontSize: '16px', cursor: 'pointer', boxShadow: '0 4px 15px rgba(249, 115, 22, 0.3)' }}
+          style={{ width: '100%', padding: '15px', borderRadius: '12px', border: 'none', background: 'var(--accent)', color: 'white', fontWeight: '900', fontSize: '16px', cursor: 'pointer', boxShadow: '0 4px 15px rgba(249, 115, 22, 0.3)', marginBottom: '15px' }}
         >
           Ativar Notificações
+        </button>
+
+        {/* Botão de Emergência / Skip */}
+        <button 
+          onClick={() => setForceHide(true)}
+          style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '13px', cursor: 'pointer', textDecoration: 'underline' }}
+        >
+          Pular por agora (Risco próprio)
         </button>
       </div>
 
