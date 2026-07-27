@@ -9,6 +9,7 @@ import Livro from './components/Livro';
 import Estatisticas from './components/Estatisticas';
 import Compras from './components/Compras';
 import Arena from './components/Arena';
+import TutorialInstalacao from './components/TutorialInstalacao';
 import { Home, Beer, Target, LayoutGrid, LogOut, Sun, BookOpen, BarChart3, ShoppingCart, Camera, Gamepad2, ChevronRight } from 'lucide-react';
 
 export default function App() {
@@ -186,6 +187,8 @@ export default function App() {
           {tab === 'menu' && <span>Menu</span>}
         </button>
       </div>
+      <TutorialInstalacao />
     </div>
+    
   );
 }
