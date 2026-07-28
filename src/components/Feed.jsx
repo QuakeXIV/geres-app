@@ -31,7 +31,6 @@ export default function Feed({ session }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [postToDelete, setPostToDelete] = useState(null);
 
-  // ESTADOS PARA EDITAR POSTS
   const [editingPostId, setEditingPostId] = useState(null);
   const [editCaptionText, setEditCaptionText] = useState('');
 
@@ -42,8 +41,26 @@ export default function Feed({ session }) {
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 4000);
   }
 
+  // A MÁGICA ESTÁ AQUI: Atualiza quando abres a app
   useEffect(() => {
     carregarPosts();
+
+    const recarregarSeVisivel = () => {
+      // Se a app voltou a ficar visível/ativa no ecrã, vai buscar novos posts
+      if (document.visibilityState === 'visible') {
+        carregarPosts();
+      }
+    };
+
+    // Fica à escuta de quando voltas à app
+    document.addEventListener('visibilitychange', recarregarSeVisivel);
+    window.addEventListener('focus', recarregarSeVisivel);
+
+    // Limpa a escuta se o componente for destruído
+    return () => {
+      document.removeEventListener('visibilitychange', recarregarSeVisivel);
+      window.removeEventListener('focus', recarregarSeVisivel);
+    };
   }, []);
 
   async function carregarPosts() {
@@ -56,10 +73,8 @@ export default function Feed({ session }) {
     if (!error) setPosts(data);
   }
 
-  // --- NOVA FUNÇÃO QUE MANDA NOTIFICAÇÃO AO DONO DO POST ---
   async function notificarDono(action, targetUserId) {
     try {
-      // Vai buscar o nome de quem está a fazer a ação para ficar bonito na notificação
       const { data: profile } = await supabase
         .from('profiles')
         .select('username')
@@ -72,10 +87,10 @@ export default function Feed({ session }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: action,          // 'like' ou 'comment'
-          actorName: actorName,    // O teu username
-          targetId: targetUserId,  // ID do dono do post
-          actingId: session.user.id // O teu ID
+          action: action,
+          actorName: actorName,
+          targetId: targetUserId,
+          actingId: session.user.id
         })
       });
     } catch (err) {
@@ -134,7 +149,6 @@ export default function Feed({ session }) {
     }
   }
 
-  // APAGAR POST
   function pedirParaApagar(postId) {
     setPostToDelete(postId);
   }
@@ -152,7 +166,6 @@ export default function Feed({ session }) {
     }
   }
 
-  // GUARDAR EDIÇÃO DA LEGENDA
   async function guardarEdicao(postId) {
     const { error } = await supabase
       .from('posts')
@@ -168,7 +181,6 @@ export default function Feed({ session }) {
     }
   }
 
-  // --- ATUALIZADO: AGORA RECEBE O postOwnerId ---
   async function toggleLike(postId, jaDeuLike, postOwnerId) {
     setPosts(postsAtuais => postsAtuais.map(post => {
       if (post.id === postId) {
@@ -184,17 +196,13 @@ export default function Feed({ session }) {
       await supabase.from('likes').delete().eq('post_id', postId).eq('user_id', session.user.id);
     } else {
       await supabase.from('likes').insert([{ post_id: postId, user_id: session.user.id }]);
-      
-      // Se deste like a alguém que não sejas tu próprio, notifica a pessoa!
       if (postOwnerId !== session.user.id) {
         notificarDono('like', postOwnerId);
       }
     }
-
     carregarPosts();
   }
 
-  // --- ATUALIZADO: AGORA RECEBE O postOwnerId ---
   async function adicionarComentario(postId, postOwnerId) {
     const texto = commentText[postId];
     if (!texto) return;
@@ -208,7 +216,6 @@ export default function Feed({ session }) {
     setCommentText({ ...commentText, [postId]: '' });
     carregarPosts();
 
-    // Se comentaste o post de outra pessoa, notifica a pessoa!
     if (postOwnerId !== session.user.id) {
       notificarDono('comment', postOwnerId);
     }
@@ -226,7 +233,6 @@ export default function Feed({ session }) {
         </div>
       )}
 
-      {/* JANELA DE NOVA PUBLICAÇÃO (MODAL) */}
       {isModalOpen && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
@@ -265,7 +271,6 @@ export default function Feed({ session }) {
         </div>
       )}
 
-      {/* FEED DE POSTS */}
       {posts.length === 0 ? (
         <div style={{
           textAlign: 'center', marginTop: '60px', padding: '30px 20px',
@@ -288,7 +293,6 @@ export default function Feed({ session }) {
             <div key={post.id} className="card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                 
-                {/* NOME DE UTILIZADOR E DATA AQUI */}
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <p style={{ fontWeight: 'bold', margin: 0, color: 'var(--accent)', fontSize: '15px' }}>
                     @{post.profiles?.username || 'Membro'}
@@ -298,7 +302,6 @@ export default function Feed({ session }) {
                   </span>
                 </div>
 
-                {/* BOTÕES DE EDITAR E APAGAR (APENAS PARA O DONO DO POST) */}
                 {eMeuPost && (
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button
@@ -328,7 +331,6 @@ export default function Feed({ session }) {
                 <img src={post.media_url} alt="Media" style={{ width: '100%', borderRadius: '12px' }} />
               )}
 
-              {/* MODO DE EDIÇÃO DA LEGENDA OU LEGENDA NORMAL */}
               {aEditar ? (
                 <div style={{ display: 'flex', gap: '8px', margin: '12px 0' }}>
                   <input
@@ -395,7 +397,6 @@ export default function Feed({ session }) {
         })
       )}
 
-      {/* BOTÃO FLUTUANTE DE "+" */}
       <button
         onClick={() => setIsModalOpen(true)}
         style={{
@@ -409,7 +410,6 @@ export default function Feed({ session }) {
         <Plus size={32} />
       </button>
 
-      {/* MODAL DE CONFIRMAÇÃO CUSTOMIZADO (CENTRADO COM RIGOR) */}
       {postToDelete && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
