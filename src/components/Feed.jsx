@@ -56,6 +56,33 @@ export default function Feed({ session }) {
     if (!error) setPosts(data);
   }
 
+  // --- NOVA FUNÇÃO QUE MANDA NOTIFICAÇÃO AO DONO DO POST ---
+  async function notificarDono(action, targetUserId) {
+    try {
+      // Vai buscar o nome de quem está a fazer a ação para ficar bonito na notificação
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', session.user.id)
+        .single();
+        
+      const actorName = profile?.username || 'Alguém';
+
+      await fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: action,          // 'like' ou 'comment'
+          actorName: actorName,    // O teu username
+          targetId: targetUserId,  // ID do dono do post
+          actingId: session.user.id // O teu ID
+        })
+      });
+    } catch (err) {
+      console.log("Erro a notificar:", err);
+    }
+  }
+
   async function publicarPost(e) {
     e.preventDefault();
 
@@ -141,7 +168,8 @@ export default function Feed({ session }) {
     }
   }
 
-  async function toggleLike(postId, jaDeuLike) {
+  // --- ATUALIZADO: AGORA RECEBE O postOwnerId ---
+  async function toggleLike(postId, jaDeuLike, postOwnerId) {
     setPosts(postsAtuais => postsAtuais.map(post => {
       if (post.id === postId) {
         const novosLikes = jaDeuLike
@@ -156,12 +184,18 @@ export default function Feed({ session }) {
       await supabase.from('likes').delete().eq('post_id', postId).eq('user_id', session.user.id);
     } else {
       await supabase.from('likes').insert([{ post_id: postId, user_id: session.user.id }]);
+      
+      // Se deste like a alguém que não sejas tu próprio, notifica a pessoa!
+      if (postOwnerId !== session.user.id) {
+        notificarDono('like', postOwnerId);
+      }
     }
 
     carregarPosts();
   }
 
-  async function adicionarComentario(postId) {
+  // --- ATUALIZADO: AGORA RECEBE O postOwnerId ---
+  async function adicionarComentario(postId, postOwnerId) {
     const texto = commentText[postId];
     if (!texto) return;
 
@@ -173,6 +207,11 @@ export default function Feed({ session }) {
 
     setCommentText({ ...commentText, [postId]: '' });
     carregarPosts();
+
+    // Se comentaste o post de outra pessoa, notifica a pessoa!
+    if (postOwnerId !== session.user.id) {
+      notificarDono('comment', postOwnerId);
+    }
   }
 
   return (
@@ -319,7 +358,7 @@ export default function Feed({ session }) {
               <div style={{ display: 'flex', alignItems: 'center', margin: '10px 0' }}>
                 <button
                   style={{ background: 'none', border: 'none', color: jaDeuLike ? '#ef4444' : 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', padding: 0 }}
-                  onClick={() => toggleLike(post.id, jaDeuLike)}
+                  onClick={() => toggleLike(post.id, jaDeuLike, post.user_id)}
                 >
                   <Heart fill={jaDeuLike ? '#ef4444' : 'none'} size={24} />
                   <span style={{ fontSize: '16px', fontWeight: 'bold' }}>{post.likes?.length || 0}</span>
@@ -345,7 +384,7 @@ export default function Feed({ session }) {
                   />
                   <button
                     style={{ background: 'var(--accent)', border: 'none', borderRadius: '8px', padding: '0 12px', cursor: 'pointer' }}
-                    onClick={() => adicionarComentario(post.id)}
+                    onClick={() => adicionarComentario(post.id, post.user_id)}
                   >
                     <Send size={18} color="white" />
                   </button>

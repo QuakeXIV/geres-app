@@ -10,6 +10,7 @@ export default async function handler(req, res) {
   let message = "";
   let targetTab = "feed";
   let actingUserId = null; // quem despoletou a ação
+  let targetUserId = null; // para quem vai a notificação (ex: dono do post)
 
   // 1. LÓGICA DO CRON (Câmara Descartável)
   if (req.query.tipo === 'camara') {
@@ -51,12 +52,31 @@ export default async function handler(req, res) {
       return res.status(200).json({ message: 'Ação ignorada (não precisa de notificação)' });
     }
   } 
+
+  // 3. LÓGICA DO FRONTEND (Likes e Comentários)
+  else if (req.body && req.body.action) {
+    const { action, actorName, targetId, actingId } = req.body;
+    actingUserId = actingId;
+    targetUserId = targetId;
+
+    if (action === 'like') {
+      title = "Novo Like! ❤️";
+      message = `${actorName} curtiu a tua publicação!`;
+      targetTab = "feed";
+    } else if (action === 'comment') {
+      title = "Novo Comentário! 💬";
+      message = `${actorName} comentou a tua publicação!`;
+      targetTab = "feed";
+    } else {
+      return res.status(200).json({ message: 'Ação ignorada' });
+    }
+  }
   
   else {
     return res.status(400).json({ error: 'Pedido inválido' });
   }
 
-  // 3. DISPARAR PARA O ONESIGNAL
+  // 4. DISPARAR PARA O ONESIGNAL
   try {
     const bodyPayload = {
       app_id: ONESIGNAL_APP_ID,
@@ -65,14 +85,22 @@ export default async function handler(req, res) {
       url: `https://geres-app.vercel.app/?tab=${targetTab}`
     };
 
-    // Se houver um autor, filtramos para enviar a todos EXCETO a ele (mantendo quem não tem a tag)
-    if (actingUserId) {
+    // Se tivermos um alvo específico (dono do post), enviamos SÓ PARA ELE
+    if (targetUserId) {
+      bodyPayload.filters = [
+        { field: "tag", key: "app_user_id", relation: "=", value: String(targetUserId) }
+      ];
+    } 
+    // Se não, e se houver um autor, filtramos para enviar a todos EXCETO a ele
+    else if (actingUserId) {
       bodyPayload.filters = [
         { field: "tag", key: "app_user_id", relation: "!=", value: String(actingUserId) },
         { operator: "OR" },
         { field: "tag", key: "app_user_id", relation: "not_exists" }
       ];
-    } else {
+    } 
+    // Se for global sem autor (ex: cron da câmara)
+    else {
       bodyPayload.included_segments = ["All"];
     }
 
