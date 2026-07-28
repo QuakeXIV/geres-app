@@ -107,8 +107,26 @@ export default function App() {
     textAlign: 'center'
   };
 
-  const pedirNotificacoes = () => {
-    OneSignal.Slidedown.promptPush();
+  const pedirNotificacoes = async () => {
+    try {
+      // Verifica se as notificações já estão ativas para este dispositivo
+      const isPushEnabled = OneSignal.User.PushSubscription.optedIn;
+      
+      if (isPushEnabled) {
+        // Se já estão ativas, desativa (Toggle OFF)
+        await OneSignal.User.PushSubscription.optOut();
+        alert("Notificações desativadas 🔕");
+      } else {
+        // Se estão desativas, liga e pede permissão (Toggle ON)
+        await OneSignal.User.PushSubscription.optIn();
+        await OneSignal.Slidedown.promptPush();
+        alert("Notificações ativadas 🔔");
+      }
+    } catch (error) {
+      console.error("Erro no toggle de notificações:", error);
+      // Fallback de segurança
+      OneSignal.Slidedown.promptPush();
+    }
   };
 
   return (
