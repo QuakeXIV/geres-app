@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { BarChart3, Trophy, Flame, Target, MessageSquareQuote, TrendingUp, Zap, Crown, Gamepad2, Skull } from 'lucide-react';
+import { BarChart3, Trophy, Flame, Target, MessageSquareQuote, TrendingUp, Zap, Crown, Gamepad2, Skull, RefreshCw } from 'lucide-react';
 
 export default function Estatisticas() {
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const [stats, setStats] = useState({
     totalBebidas: 0,
@@ -26,11 +27,26 @@ export default function Estatisticas() {
   ];
 
   useEffect(() => {
-    calcularWrapped();
+    calcularWrapped(true);
+
+    const recarregarSeVisivel = () => {
+      if (document.visibilityState === 'visible') {
+        calcularWrapped(false);
+      }
+    };
+
+    document.addEventListener('visibilitychange', recarregarSeVisivel);
+    window.addEventListener('focus', recarregarSeVisivel);
+
+    return () => {
+      document.removeEventListener('visibilitychange', recarregarSeVisivel);
+      window.removeEventListener('focus', recarregarSeVisivel);
+    };
   }, []);
 
-  async function calcularWrapped() {
-    setLoading(true);
+  async function calcularWrapped(initial = false) {
+    if (initial) setLoading(true);
+    setIsRefreshing(true);
 
     const { data: drinks } = await supabase.from('drinks').select('*, profiles(username)');
     const { data: missions } = await supabase.from('challenge_requests').select('*, profiles(username)').eq('status', 'completed');
@@ -126,7 +142,8 @@ export default function Estatisticas() {
     }
 
     setStats(newStats);
-    setLoading(false);
+    if (initial) setLoading(false);
+    setIsRefreshing(false);
   }
 
   if (loading) {
@@ -136,6 +153,13 @@ export default function Estatisticas() {
   return (
     <div style={{ padding: '10px', paddingBottom: 'calc(130px + env(safe-area-inset-bottom))' }}>
       
+      {/* BOTÃO DE REFRESH MANUAL NO TOPO */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
+        <button onClick={() => calcularWrapped(false)} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #e2e8f0', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+          <RefreshCw size={16} /> {isRefreshing ? 'A atualizar...' : 'Atualizar Stats'}
+        </button>
+      </div>
+
       <div className="card" style={{ textAlign: 'center', background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', color: 'white', position: 'relative', overflow: 'hidden' }}>
         <BarChart3 size={100} color="#ffedd5" style={{ position: 'absolute', top: '-10px', right: '-20px', opacity: 0.2 }} />
         <h2 style={{ margin: '0 0 5px 0', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', position: 'relative' }}>
@@ -179,7 +203,7 @@ export default function Estatisticas() {
         <div style={{ position: 'relative' }}>
           <p style={{ margin: 0, fontSize: '12px', color: '#854d0e', fontWeight: 'bold' }}>REI/RAINHA DA TASCA</p>
           <h4 style={{ margin: '5px 0 0 0', fontSize: '24px', color: '#713f12' }}>@{stats.reiTasca}</h4>
-          <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#854d0e' }}>A pessoa que mais dano causou ao próprio fígado (mais Putómetros acumulados).</p>
+          <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#854d0e' }}>A pessoa que mais dano causou ao próprio fígado.</p>
         </div>
       </div>
 
@@ -188,17 +212,16 @@ export default function Estatisticas() {
         <div style={{ position: 'relative' }}>
           <p style={{ margin: 0, fontSize: '12px', color: '#1e3a8a', fontWeight: 'bold' }}>O MAIS MALUCO DAS MISSÕES</p>
           <h4 style={{ margin: '5px 0 0 0', fontSize: '24px', color: '#1e40af' }}>@{stats.reiMissoes}</h4>
-          <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#1e3a8a' }}>Nunca recusa um desafio. Tem mais missões cumpridas e aprovadas pelo Tribunal.</p>
+          <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#1e3a8a' }}>Nunca recusa um desafio. Tem mais missões aprovadas.</p>
         </div>
       </div>
 
-      {/* NOVO CARTÃO: REI DA ARENA */}
       <div className="card" style={{ background: 'linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%)', border: 'none', position: 'relative', overflow: 'hidden' }}>
         <Gamepad2 size={80} color="#f1f5f9" style={{ position: 'absolute', right: '-10px', bottom: '-10px', opacity: 0.3 }} />
         <div style={{ position: 'relative' }}>
           <p style={{ margin: 0, fontSize: '12px', color: '#334155', fontWeight: 'bold' }}>O CAMPEÃO DOS JOGOS</p>
           <h4 style={{ margin: '5px 0 0 0', fontSize: '24px', color: '#0f172a' }}>{stats.reiArena}</h4>
-          <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#334155' }}>Quem acumulou mais vitórias no Marcador da Arena.</p>
+          <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#334155' }}>Quem acumulou mais vitórias na Arena.</p>
         </div>
       </div>
 
@@ -207,17 +230,16 @@ export default function Estatisticas() {
         <div style={{ position: 'relative' }}>
           <p style={{ margin: 0, fontSize: '12px', color: '#7f1d1d', fontWeight: 'bold' }}>O POETA DA CASA</p>
           <h4 style={{ margin: '5px 0 0 0', fontSize: '24px', color: '#991b1b' }}>{stats.alvoMaisCitado}</h4>
-          <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#7f1d1d' }}>A pessoa que disse mais barbaridades registadas no Livro Sagrado.</p>
+          <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#7f1d1d' }}>Disse mais barbaridades registadas no Livro Sagrado.</p>
         </div>
       </div>
 
-      {/* NOVO CARTÃO: O SACO DE PANCADA */}
       <div className="card" style={{ background: '#1e293b', border: 'none', position: 'relative', overflow: 'hidden' }}>
         <Skull size={80} color="#334155" style={{ position: 'absolute', right: '-10px', bottom: '-10px', opacity: 0.3 }} />
         <div style={{ position: 'relative' }}>
           <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8', fontWeight: 'bold' }}>O SACO DE PANCADA</p>
           <h4 style={{ margin: '5px 0 0 0', fontSize: '24px', color: 'white' }}>{stats.sacoPancada}</h4>
-          <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#94a3b8' }}>A pessoa ou equipa que tem o infeliz recorde de mais derrotas na Arena.</p>
+          <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#94a3b8' }}>A pessoa/equipa com o infeliz recorde de derrotas na Arena.</p>
         </div>
       </div>
 

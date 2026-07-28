@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Beer, Award, BookOpen, Plus, Flame, Trash2 } from 'lucide-react';
+import { Beer, Award, BookOpen, Plus, Flame, Trash2, RefreshCw } from 'lucide-react';
 
 export default function Tasca({ session }) {
   const [subTab, setSubTab] = useState('leaderboard');
@@ -9,6 +9,7 @@ export default function Tasca({ session }) {
   const [selectedDrink, setSelectedDrink] = useState('');
   const [quantidade, setQuantidade] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   function showToast(message, type = 'success') {
@@ -26,14 +27,28 @@ export default function Tasca({ session }) {
     { id: 7, nome: 'Gin', putometro: 5, icone: '🍹' },
     { id: 8, nome: 'Copo de vinho', putometro: 2, icone: '🍹' },
     { id: 9, nome: 'Fino + Favaios', putometro: 1.5, icone: '🍹' },
-
   ]);
 
   useEffect(() => {
     carregarDadosTasca();
+
+    const recarregarSeVisivel = () => {
+      if (document.visibilityState === 'visible') {
+        carregarDadosTasca();
+      }
+    };
+
+    document.addEventListener('visibilitychange', recarregarSeVisivel);
+    window.addEventListener('focus', recarregarSeVisivel);
+
+    return () => {
+      document.removeEventListener('visibilitychange', recarregarSeVisivel);
+      window.removeEventListener('focus', recarregarSeVisivel);
+    };
   }, []);
 
   async function carregarDadosTasca() {
+    setIsRefreshing(true);
     const { data: drinksData, error: drinksError } = await supabase
       .from('drinks')
       .select('*')
@@ -41,6 +56,7 @@ export default function Tasca({ session }) {
 
     if (drinksError) {
       showToast(`Erro drinks: ${drinksError.message}`, 'error');
+      setIsRefreshing(false);
       return;
     }
 
@@ -50,6 +66,7 @@ export default function Tasca({ session }) {
 
     if (profilesError) {
       showToast(`Erro profiles: ${profilesError.message}`, 'error');
+      setIsRefreshing(false);
       return;
     }
 
@@ -63,6 +80,7 @@ export default function Tasca({ session }) {
 
     setDrinks(drinksComPerfis);
     calcularLeaderboard(drinksComPerfis);
+    setIsRefreshing(false);
   }
 
   function calcularLeaderboard(registos) {
@@ -110,12 +128,11 @@ export default function Tasca({ session }) {
       showToast('Consumo registado com sucesso! 🍻', 'success');
       setSelectedDrink('');
       setQuantidade(1);
-      await carregarDadosTasca(); // Atualiza leaderboard na hora
+      await carregarDadosTasca(); 
     }
     setLoading(false);
   }
 
-  // NOVA FUNÇÃO: Apagar um registo de bebida
   async function apagarConsumo(drinkId) {
     const { error } = await supabase.from('drinks').delete().eq('id', drinkId);
 
@@ -123,7 +140,7 @@ export default function Tasca({ session }) {
       showToast(`Erro ao apagar: ${error.message}`, 'error');
     } else {
       showToast('Consumo removido! 🗑️', 'success');
-      await carregarDadosTasca(); // Atualiza leaderboard na hora
+      await carregarDadosTasca(); 
     }
   }
 
@@ -135,6 +152,13 @@ export default function Tasca({ session }) {
           {toast.message}
         </div>
       )}
+
+      {/* BOTÃO DE REFRESH MANUAL NO TOPO */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
+        <button onClick={carregarDadosTasca} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #e2e8f0', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+          <RefreshCw size={16} /> {isRefreshing ? 'A atualizar...' : 'Atualizar Tasca'}
+        </button>
+      </div>
 
       <div className="card" style={{ textAlign: 'center', background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', color: 'white' }}>
         <h2 style={{ margin: '0 0 5px 0' }}>🍻 Tasca do Gerês</h2>
@@ -223,7 +247,6 @@ export default function Tasca({ session }) {
             )}
           </div>
 
-          {/* LISTA RECENTE DE CONSUMOS COM BOTÃO DE APAGAR */}
           <div className="card">
             <h3 style={{ margin: '0 0 15px 0', fontSize: '18px' }}>📜 Histórico de Consumos</h3>
             {drinks.length === 0 ? (
@@ -237,7 +260,6 @@ export default function Tasca({ session }) {
                       {drink.quantity}x {drink.drink_name}
                     </p>
                   </div>
-                  {/* Botão para apagar este registo específico */}
                   <button
                     onClick={() => apagarConsumo(drink.id)}
                     style={{ background: '#fee2e2', border: 'none', borderRadius: '8px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}

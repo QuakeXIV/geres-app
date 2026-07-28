@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Target, Trophy, CheckCircle, Circle, ShieldAlert, Zap, Gavel, ThumbsUp, Clock } from 'lucide-react';
+import { Target, Trophy, CheckCircle, Circle, ShieldAlert, Zap, Gavel, ThumbsUp, Clock, RefreshCw } from 'lucide-react';
 
 export default function Missoes({ session }) {
   const [subTab, setSubTab] = useState('diarios');
@@ -8,12 +8,12 @@ export default function Missoes({ session }) {
   const [indicesHoje, setIndicesHoje] = useState([]);
   const [todayStr, setTodayStr] = useState('');
   
-  // Dados do servidor
   const [myRequests, setMyRequests] = useState([]);
   const [tribunalRequests, setTribunalRequests] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   
   const [loadingAction, setLoadingAction] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   function showToast(message, type = 'success') {
@@ -59,7 +59,6 @@ export default function Missoes({ session }) {
     "Fazer de conta que não conheces alguém do grupo durante 15 minutos."
   ];
 
-  // A MÁGICA DE RECARREGAR AUTOMATICAMENTE ESTÁ AQUI
   useEffect(() => {
     const d = new Date();
     const str = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
@@ -95,13 +94,12 @@ export default function Missoes({ session }) {
     };
   }, []);
 
-  async function carregarDados(dataHoje) {
-    // 1. Vai buscar TUDO manualmente para não haver erros de cruzamento no Supabase
+  async function carregarDados(dataHoje = todayStr) {
+    setIsRefreshing(true);
     const { data: reqsData } = await supabase.from('challenge_requests').select('*');
     const { data: appsData } = await supabase.from('challenge_approvals').select('*');
     const { data: profsData } = await supabase.from('profiles').select('id, username');
 
-    // 2. Monta o pacote de dados completo
     const fullRequests = (reqsData || []).map(req => {
       const perfil = (profsData || []).find(p => p.id === req.user_id);
       const approvals = (appsData || []).filter(a => a.request_id === req.id);
@@ -113,15 +111,12 @@ export default function Missoes({ session }) {
       };
     });
 
-    // 3. Filtra os teus desafios de hoje
     const osMeus = fullRequests.filter(r => r.user_id === session.user.id && r.date_key === dataHoje);
     setMyRequests(osMeus);
 
-    // 4. Filtra os desafios dos OUTROS que precisam de aprovação hoje
     const tribunal = fullRequests.filter(r => r.user_id !== session.user.id && r.date_key === dataHoje && r.status === 'pending');
     setTribunalRequests(tribunal);
 
-    // 5. Calcula a Leaderboard (Apenas os que têm status 'completed')
     const scores = {};
     fullRequests.filter(r => r.status === 'completed').forEach(registo => {
       if (!scores[registo.username]) scores[registo.username] = 0;
@@ -133,9 +128,9 @@ export default function Missoes({ session }) {
       .sort((a, b) => b.total - a.total);
 
     setLeaderboard(rankingArray);
+    setIsRefreshing(false);
   }
 
-  // FUNÇÃO 1: Pedir aprovação para um desafio teu
   async function pedirAprovacao(localIndex) {
     setLoadingAction(`pedir-${localIndex}`);
     const globalIndexToSave = indicesHoje[localIndex];
@@ -156,11 +151,9 @@ export default function Missoes({ session }) {
     setLoadingAction(null);
   }
 
-  // FUNÇÃO 2: Aprovar o desafio de outra pessoa
   async function aprovarDesafio(request) {
     setLoadingAction(`aprovar-${request.id}`);
 
-    // 1. Regista o teu voto
     const { error: insertError } = await supabase.from('challenge_approvals').insert([{
       request_id: request.id,
       approver_id: session.user.id
@@ -172,7 +165,6 @@ export default function Missoes({ session }) {
       return;
     }
 
-    // 2. Se com o teu voto chegou a 3, muda o status para completed!
     if (request.approvalCount + 1 >= 3) {
       await supabase.from('challenge_requests').update({ status: 'completed' }).eq('id', request.id);
       showToast('Aprovado! Essa pessoa acabou de ganhar 1 ponto! 🎯', 'success');
@@ -192,6 +184,13 @@ export default function Missoes({ session }) {
           {toast.message}
         </div>
       )}
+
+      {/* BOTÃO DE REFRESH MANUAL NO TOPO */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
+        <button onClick={() => carregarDados(todayStr)} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #e2e8f0', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+          <RefreshCw size={16} /> {isRefreshing ? 'A atualizar...' : 'Atualizar Missões'}
+        </button>
+      </div>
 
       {/* CABEÇALHO */}
       <div className="card" style={{ textAlign: 'center', background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', color: 'white' }}>

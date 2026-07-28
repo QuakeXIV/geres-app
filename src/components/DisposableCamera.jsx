@@ -7,14 +7,28 @@ export default function DisposableCamera({ session }) {
   const [uploading, setUploading] = useState(false);
   const [revealedPosts, setRevealedPosts] = useState([]);
 
+  // A MÁGICA ESTÁ AQUI
   useEffect(() => {
     carregarFotosDescartaveis();
+
+    const recarregarSeVisivel = () => {
+      if (document.visibilityState === 'visible') {
+        carregarFotosDescartaveis();
+      }
+    };
+
+    document.addEventListener('visibilitychange', recarregarSeVisivel);
+    window.addEventListener('focus', recarregarSeVisivel);
+
+    return () => {
+      document.removeEventListener('visibilitychange', recarregarSeVisivel);
+      window.removeEventListener('focus', recarregarSeVisivel);
+    };
   }, []);
 
   async function carregarFotosDescartaveis() {
     const agora = new Date().toISOString();
 
-    // Saca apenas as fotos descartáveis cuja data de revelação já passou
     const { data } = await supabase
       .from('posts')
       .select('*, profiles(username)')
@@ -36,7 +50,6 @@ export default function DisposableCamera({ session }) {
     await supabase.storage.from('media').upload(filePath, file);
     const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(filePath);
 
-    // Define a revelação para o meio-dia do dia seguinte
     const amanhaMeioDia = new Date();
     amanhaMeioDia.setDate(amanhaMeioDia.getDate() + 1);
     amanhaMeioDia.setHours(10, 0, 0, 0);

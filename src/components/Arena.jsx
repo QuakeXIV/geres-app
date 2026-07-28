@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Swords, Trophy, Plus, Minus, Flag, Activity, Crown, Trash2 } from 'lucide-react';
+import { Swords, Trophy, Plus, Minus, Flag, Activity, Crown, Trash2, RefreshCw } from 'lucide-react';
 
 export default function Arena({ session }) {
   const [subTab, setSubTab] = useState('marcador');
@@ -14,6 +14,7 @@ export default function Arena({ session }) {
   const [tourneyPlayers, setTourneyPlayers] = useState('');
   
   const [loading, setLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null });
 
@@ -24,18 +25,33 @@ export default function Arena({ session }) {
 
   useEffect(() => {
     carregarDados();
+    
     const interval = setInterval(() => {
       if (subTab === 'marcador') carregarJogos(false);
       if (subTab === 'torneios') carregarTorneios(false);
     }, 5000);
-    return () => clearInterval(interval);
+
+    const recarregarSeVisivel = () => {
+      if (document.visibilityState === 'visible') {
+        carregarDados();
+      }
+    };
+
+    document.addEventListener('visibilitychange', recarregarSeVisivel);
+    window.addEventListener('focus', recarregarSeVisivel);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', recarregarSeVisivel);
+      window.removeEventListener('focus', recarregarSeVisivel);
+    };
   }, [subTab]);
 
   async function carregarDados() {
-    setLoading(true);
+    setIsRefreshing(true);
     await carregarJogos(false);
     await carregarTorneios(false);
-    setLoading(false);
+    setIsRefreshing(false);
   }
 
   async function carregarJogos(showLoader = true) {
@@ -182,7 +198,13 @@ export default function Arena({ session }) {
         </div>
       )}
 
-      {/* CABEÇALHO OFICIAL COM AS CORES DA APP */}
+      {/* BOTÃO DE REFRESH MANUAL NO TOPO */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
+        <button onClick={carregarDados} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #e2e8f0', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+          <RefreshCw size={16} /> {isRefreshing ? 'A atualizar...' : 'Atualizar Arena'}
+        </button>
+      </div>
+
       <div className="card" style={{ textAlign: 'center', background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', color: 'white' }}>
         <h2 style={{ margin: '0 0 5px 0', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
           <Swords size={26} color="white" /> Arena de Jogos
@@ -199,7 +221,6 @@ export default function Arena({ session }) {
         </div>
       </div>
 
-      {/* -------------------- MODO 1: MARCADOR RÁPIDO -------------------- */}
       {subTab === 'marcador' && (
         <>
           <div className="card">
@@ -267,7 +288,6 @@ export default function Arena({ session }) {
         </>
       )}
 
-      {/* -------------------- MODO 2: TORNEIOS -------------------- */}
       {subTab === 'torneios' && (
         <>
           <div className="card">

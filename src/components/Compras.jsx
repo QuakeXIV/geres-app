@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { ShoppingCart, Plus, CheckCircle2, Circle, Trash2, Beef } from 'lucide-react';
+import { ShoppingCart, Plus, CheckCircle2, Circle, Trash2, Beef, RefreshCw } from 'lucide-react';
 
 export default function Compras({ session }) {
   const [items, setItems] = useState([]);
   const [novoItem, setNovoItem] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   function showToast(message, type = 'success') {
@@ -13,7 +14,6 @@ export default function Compras({ session }) {
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 4000);
   }
 
-  // A MÁGICA DE RECARREGAR AUTOMATICAMENTE ESTÁ AQUI
   useEffect(() => {
     carregarLista();
 
@@ -33,7 +33,8 @@ export default function Compras({ session }) {
   }, []);
 
   async function carregarLista() {
-    // 1. Puxar apenas a lista de compras (sem o join manhoso que estava a dar erro)
+    setIsRefreshing(true);
+    // 1. Puxar apenas a lista de compras
     const { data: listData, error } = await supabase
       .from('shopping_list')
       .select('*')
@@ -42,13 +43,14 @@ export default function Compras({ session }) {
 
     if (error) {
       console.error("Erro ao puxar compras:", error);
+      setIsRefreshing(false);
       return;
     }
 
     // 2. Puxar os perfis à parte
     const { data: profilesData } = await supabase.from('profiles').select('id, username');
 
-    // 3. Cruzar os dados à mão (o método que não falha)
+    // 3. Cruzar os dados à mão
     const itemsComPerfis = (listData || []).map(item => {
       const perfil = (profilesData || []).find(p => p.id === item.user_id);
       return {
@@ -58,6 +60,7 @@ export default function Compras({ session }) {
     });
     
     setItems(itemsComPerfis);
+    setIsRefreshing(false);
   }
 
   async function adicionarItem(e) {
@@ -111,6 +114,13 @@ export default function Compras({ session }) {
           {toast.message}
         </div>
       )}
+
+      {/* BOTÃO DE REFRESH MANUAL NO TOPO */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
+        <button onClick={carregarLista} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #e2e8f0', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+          <RefreshCw size={16} /> {isRefreshing ? 'A atualizar...' : 'Atualizar Radar'}
+        </button>
+      </div>
 
       {/* CABEÇALHO */}
       <div className="card" style={{ textAlign: 'center', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white' }}>

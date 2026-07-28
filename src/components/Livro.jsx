@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { MessageSquareQuote, PenTool, Trash2, BookOpen } from 'lucide-react';
+import { MessageSquareQuote, PenTool, Trash2, BookOpen, RefreshCw } from 'lucide-react';
 
 export default function Livro({ session }) {
   const [quotes, setQuotes] = useState([]);
   const [novaCitacao, setNovaCitacao] = useState('');
   const [autorCitacao, setAutorCitacao] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   
   const [quoteToDelete, setQuoteToDelete] = useState(null);
@@ -16,7 +17,6 @@ export default function Livro({ session }) {
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 4000);
   }
 
-  // A MÁGICA DE RECARREGAR AUTOMATICAMENTE ESTÁ AQUI
   useEffect(() => {
     carregarQuotes();
 
@@ -36,6 +36,7 @@ export default function Livro({ session }) {
   }, []);
 
   async function carregarQuotes() {
+    setIsRefreshing(true);
     const { data: quotesData, error } = await supabase
       .from('tasca_quotes')
       .select('*')
@@ -43,6 +44,7 @@ export default function Livro({ session }) {
 
     if (error) {
       console.error("Erro a puxar o livro:", error);
+      setIsRefreshing(false);
       return;
     }
 
@@ -54,6 +56,7 @@ export default function Livro({ session }) {
     });
 
     setQuotes(quotesComPerfis);
+    setIsRefreshing(false);
   }
 
   async function registarOcorrencia(e) {
@@ -100,7 +103,14 @@ export default function Livro({ session }) {
         </div>
       )}
 
-      {/* CABEÇALHO COM O GRADIENTE OFICIAL */}
+      {/* BOTÃO DE REFRESH MANUAL NO TOPO */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
+        <button onClick={carregarQuotes} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #e2e8f0', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+          <RefreshCw size={16} /> {isRefreshing ? 'A atualizar...' : 'Atualizar Livro'}
+        </button>
+      </div>
+
+      {/* CABEÇALHO */}
       <div className="card" style={{ textAlign: 'center', background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', color: 'white' }}>
         <h2 style={{ margin: '0 0 5px 0', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
           <BookOpen size={26} /> Livro de Ocorrências
@@ -174,20 +184,14 @@ export default function Livro({ session }) {
         )}
       </div>
 
-      {/* MODAL DE CONFIRMAÇÃO COM CORES OFICIAIS */}
+      {/* MODAL DE CONFIRMAÇÃO */}
       {quoteToDelete && (
         <div style={{
           position: 'fixed', 
           top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(0,0,0,0.6)', 
           backdropFilter: 'blur(5px)', 
-          WebkitBackdropFilter: 'blur(5px)', 
-          zIndex: 99999, 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          padding: '20px',
-          boxSizing: 'border-box'
+          zIndex: 99999, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px', boxSizing: 'border-box'
         }}>
           <div className="card" style={{ width: '100%', maxWidth: '320px', textAlign: 'center', margin: 0, padding: '25px 20px', animation: 'scaleIn 0.2s ease-out' }}>
             <div style={{ background: '#ffedd5', width: '50px', height: '50px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px auto' }}>

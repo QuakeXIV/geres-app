@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Heart, Send, Plus, X, Trash2, Edit2, Check } from 'lucide-react';
+import { Heart, Send, Plus, X, Trash2, Edit2, Check, RefreshCw } from 'lucide-react';
 
 function formatarTempo(dataIso) {
   if (!dataIso) return '';
@@ -27,6 +27,7 @@ export default function Feed({ session }) {
   const [caption, setCaption] = useState('');
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [commentText, setCommentText] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [postToDelete, setPostToDelete] = useState(null);
@@ -46,17 +47,14 @@ export default function Feed({ session }) {
     carregarPosts();
 
     const recarregarSeVisivel = () => {
-      // Se a app voltou a ficar visível/ativa no ecrã, vai buscar novos posts
       if (document.visibilityState === 'visible') {
         carregarPosts();
       }
     };
 
-    // Fica à escuta de quando voltas à app
     document.addEventListener('visibilitychange', recarregarSeVisivel);
     window.addEventListener('focus', recarregarSeVisivel);
 
-    // Limpa a escuta se o componente for destruído
     return () => {
       document.removeEventListener('visibilitychange', recarregarSeVisivel);
       window.removeEventListener('focus', recarregarSeVisivel);
@@ -64,6 +62,7 @@ export default function Feed({ session }) {
   }, []);
 
   async function carregarPosts() {
+    setIsRefreshing(true);
     const { data, error } = await supabase
       .from('posts')
       .select('*, profiles(username), likes(user_id), comments(*, profiles(username))')
@@ -71,6 +70,7 @@ export default function Feed({ session }) {
       .order('created_at', { ascending: false });
 
     if (!error) setPosts(data);
+    setIsRefreshing(false);
   }
 
   async function notificarDono(action, targetUserId) {
@@ -233,6 +233,14 @@ export default function Feed({ session }) {
         </div>
       )}
 
+      {/* BOTÃO DE REFRESH MANUAL */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
+        <button onClick={carregarPosts} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #e2e8f0', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+          <RefreshCw size={16} /> {isRefreshing ? 'A atualizar...' : 'Atualizar Feed'}
+        </button>
+      </div>
+
+      {/* JANELA DE NOVA PUBLICAÇÃO (MODAL) */}
       {isModalOpen && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
@@ -271,6 +279,7 @@ export default function Feed({ session }) {
         </div>
       )}
 
+      {/* FEED DE POSTS */}
       {posts.length === 0 ? (
         <div style={{
           textAlign: 'center', marginTop: '60px', padding: '30px 20px',
@@ -302,6 +311,7 @@ export default function Feed({ session }) {
                   </span>
                 </div>
 
+                {/* BOTÕES DE EDITAR E APAGAR */}
                 {eMeuPost && (
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button
@@ -331,6 +341,7 @@ export default function Feed({ session }) {
                 <img src={post.media_url} alt="Media" style={{ width: '100%', borderRadius: '12px' }} />
               )}
 
+              {/* MODO DE EDIÇÃO */}
               {aEditar ? (
                 <div style={{ display: 'flex', gap: '8px', margin: '12px 0' }}>
                   <input
@@ -397,6 +408,7 @@ export default function Feed({ session }) {
         })
       )}
 
+      {/* BOTÃO FLUTUANTE DE "+" */}
       <button
         onClick={() => setIsModalOpen(true)}
         style={{
@@ -410,6 +422,7 @@ export default function Feed({ session }) {
         <Plus size={32} />
       </button>
 
+      {/* MODAL DE CONFIRMAÇÃO CUSTOMIZADO */}
       {postToDelete && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
