@@ -68,10 +68,10 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         app_id: ONESIGNAL_APP_ID,
-        included_segments: ["All"],
+        include_external_user_ids: [req.body?.userId || "ID_DO_TEU_USER_AQUI"], // Manda para ti diretamente
         headings: { en: title },
         contents: { en: message },
-        url: `https://geres-app.vercel.app/?tab=${targetTab}` // Deep Linking em ação!
+        url: `https://geres-app.vercel.app/?tab=${targetTab}`
       })
     });
 
