@@ -12,7 +12,7 @@ import Compras from './components/Compras';
 import Arena from './components/Arena';
 import TutorialInstalacao from './components/TutorialInstalacao';
 import PermissaoNotificacoes from './components/PermissaoNotificacoes';
-import { Home, Beer, Target, LayoutGrid, LogOut, Sun, BookOpen, BarChart3, ShoppingCart, Camera, Gamepad2, ChevronRight, Bell } from 'lucide-react';
+import { Home, Beer, Target, LayoutGrid, LogOut, Sun, BookOpen, BarChart3, ShoppingCart, Camera, Gamepad2, ChevronRight, Bell, BellOff } from 'lucide-react';
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -21,6 +21,15 @@ export default function App() {
     return params.get('tab') || 'feed';
   });
   const oneSignalInitRef = useRef(false);
+
+  // ESTADO PARA O ALERTA E PARA O TOGGLE
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
+  const [pushEnabled, setPushEnabled] = useState(false);
+
+  function showToast(message, type = 'success') {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: '' }), 4000);
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -32,7 +41,7 @@ export default function App() {
     });
   }, []);
 
-  // 1. INICIA O ONESIGNAL
+  // 1. INICIA O ONESIGNAL E LÊ O ESTADO ATUAL DAS NOTIFICAÇÕES
   useEffect(() => {
     if (oneSignalInitRef.current) return;
     oneSignalInitRef.current = true; 
@@ -42,10 +51,14 @@ export default function App() {
         await OneSignal.init({
           appId: "2505560e-8033-4528-997c-eca674fa3230",
           allowLocalhostAsSecureOrigin: true,
-          notifyButton: {
-            enable: true,
-          },
+          notifyButton: { enable: false }, // Escondemos o sino feio default
         });
+
+        // Verifica se o gajo já tem notificações ativas neste telemóvel/PC
+        if (OneSignal.User && OneSignal.User.PushSubscription) {
+          const isAtivo = OneSignal.User.PushSubscription.optedIn;
+          setPushEnabled(isAtivo);
+        }
       } catch (error) {
         console.error("Erro ao iniciar OneSignal:", error);
       }
@@ -54,12 +67,11 @@ export default function App() {
     startOneSignal();
   }, []);
 
-  // 2. ASSOCIA O UTILIZADOR E DEFINE A TAG PARA O FILTRO DA VERCEL
+  // 2. ASSOCIA O UTILIZADOR E DEFINE A TAG
   useEffect(() => {
     if (session?.user?.id) {
       try {
         OneSignal.login(session.user.id);
-        // Atribui a tag exata que o backend usa para filtrar o autor
         if (OneSignal.User) {
           OneSignal.User.addTag("app_user_id", session.user.id);
         } else {
@@ -76,61 +88,56 @@ export default function App() {
   }
 
   const navItemStyle = (isActive) => ({
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: isActive ? '6px' : '0',
-    padding: isActive ? '12px 18px' : '12px',
-    borderRadius: '24px',
-    background: isActive ? 'var(--accent)' : 'transparent',
-    color: isActive ? 'white' : '#64748b',
-    border: 'none',
-    cursor: 'pointer',
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    fontWeight: 'bold',
-    fontSize: '14px'
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    gap: isActive ? '6px' : '0', padding: isActive ? '12px 18px' : '12px',
+    borderRadius: '24px', background: isActive ? 'var(--accent)' : 'transparent',
+    color: isActive ? 'white' : '#64748b', border: 'none', cursor: 'pointer',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', fontWeight: 'bold', fontSize: '14px'
   });
 
   const menuCardStyle = {
-    background: 'white',
-    borderRadius: '16px',
-    padding: '20px 15px',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '10px',
-    boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
-    border: '1px solid #f1f5f9',
-    cursor: 'pointer',
-    transition: 'transform 0.2s',
-    textAlign: 'center'
+    background: 'white', borderRadius: '16px', padding: '20px 15px',
+    display: 'flex', flexDirection: 'column', alignItems: 'center',
+    justifyContent: 'center', gap: '10px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
+    border: '1px solid #f1f5f9', cursor: 'pointer', transition: 'transform 0.2s',
+    textAlign: 'center', position: 'relative'
   };
 
-  const pedirNotificacoes = async () => {
+  // 3. TOGGLE DE NOTIFICAÇÕES REAL E INTUITIVO
+  const toggleNotificacoes = async () => {
     try {
-      // Verifica se as notificações já estão ativas para este dispositivo
-      const isPushEnabled = OneSignal.User.PushSubscription.optedIn;
-      
-      if (isPushEnabled) {
-        // Se já estão ativas, desativa (Toggle OFF)
-        await OneSignal.User.PushSubscription.optOut();
-        alert("Notificações desativadas 🔕");
-      } else {
-        // Se estão desativas, liga e pede permissão (Toggle ON)
-        await OneSignal.User.PushSubscription.optIn();
-        await OneSignal.Slidedown.promptPush();
-        alert("Notificações ativadas 🔔");
+      if (OneSignal.User && OneSignal.User.PushSubscription) {
+        if (pushEnabled) {
+          await OneSignal.User.PushSubscription.optOut();
+          setPushEnabled(false); // Atualiza logo o visual para vermelho
+          showToast("Notificações desativadas 🔕", "error");
+        } else {
+          await OneSignal.User.PushSubscription.optIn();
+          if (OneSignal.Slidedown) await OneSignal.Slidedown.promptPush();
+          setPushEnabled(true); // Atualiza logo o visual para verde
+          showToast("Notificações ativadas 🔔", "success");
+        }
       }
     } catch (error) {
       console.error("Erro no toggle de notificações:", error);
-      // Fallback de segurança
-      OneSignal.Slidedown.promptPush();
     }
   };
 
   return (
     <div>
+      {/* O NOSSO TOAST BONITO */}
+      {toast.show && (
+        <div style={{
+          position: 'fixed', top: 'calc(60px + env(safe-area-inset-top))', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 9999, width: '90%', maxWidth: '400px',
+          background: toast.type === 'error' ? '#334155' : 'var(--accent)',
+          color: 'white', padding: '12px 20px', borderRadius: '12px',
+          textAlign: 'center', fontWeight: 'bold', boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+        }}>
+          {toast.message}
+        </div>
+      )}
+
       <div style={{ 
         display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
         paddingTop: 'calc(15px + env(safe-area-inset-top))', paddingBottom: '15px',
@@ -168,13 +175,30 @@ export default function App() {
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
               
-              <div style={menuCardStyle} onClick={pedirNotificacoes}>
-                <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
-                  <Bell size={28} color="var(--accent)" />
+              {/* CARTÃO DE NOTIFICAÇÕES (AGORA COM VISUAL DINÂMICO) */}
+              <div 
+                style={{ 
+                  ...menuCardStyle, 
+                  border: pushEnabled ? '2px solid #22c55e' : '2px solid transparent'
+                }} 
+                onClick={toggleNotificacoes}
+              >
+                {/* Ponto verde/vermelho no canto */}
+                <div style={{
+                  position: 'absolute', top: '12px', right: '12px',
+                  width: '10px', height: '10px', borderRadius: '50%',
+                  background: pushEnabled ? '#22c55e' : '#ef4444',
+                  boxShadow: pushEnabled ? '0 0 8px rgba(34, 197, 94, 0.6)' : 'none'
+                }} />
+                
+                <div style={{ background: pushEnabled ? '#dcfce7' : '#fee2e2', padding: '12px', borderRadius: '50%' }}>
+                  {pushEnabled ? <Bell size={28} color="#16a34a" /> : <BellOff size={28} color="#dc2626" />}
                 </div>
                 <div>
                   <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>Notificações</h4>
-                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Ativar Alertas</p>
+                  <p style={{ margin: 0, fontSize: '11px', fontWeight: 'bold', color: pushEnabled ? '#16a34a' : '#dc2626' }}>
+                    {pushEnabled ? 'LIGADAS' : 'DESLIGADAS'}
+                  </p>
                 </div>
               </div>
 
