@@ -2,6 +2,26 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Heart, Send, Plus, X, Trash2, Edit2, Check } from 'lucide-react';
 
+function formatarTempo(dataIso) {
+  if (!dataIso) return '';
+  const dataPost = new Date(dataIso);
+  const agora = new Date();
+  const segundos = Math.floor((agora - dataPost) / 1000);
+
+  if (segundos < 60) return 'agora mesmo';
+  
+  const minutos = Math.floor(segundos / 60);
+  if (minutos < 60) return `há ${minutos}m`;
+  
+  const horas = Math.floor(minutos / 60);
+  if (horas < 24) return `há ${horas}h`;
+  
+  const dias = Math.floor(horas / 24);
+  if (dias < 7) return `há ${dias}d`;
+  
+  return dataPost.toLocaleDateString('pt-PT');
+}
+
 export default function Feed({ session }) {
   const [posts, setPosts] = useState([]);
   const [caption, setCaption] = useState('');
@@ -228,9 +248,16 @@ export default function Feed({ session }) {
           return (
             <div key={post.id} className="card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <p style={{ fontWeight: 'bold', margin: 0, color: 'var(--accent)', fontSize: '15px' }}>
-                  @{post.profiles?.username || 'Membro'}
-                </p>
+                
+                {/* NOME DE UTILIZADOR E DATA AQUI */}
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <p style={{ fontWeight: 'bold', margin: 0, color: 'var(--accent)', fontSize: '15px' }}>
+                    @{post.profiles?.username || 'Membro'}
+                  </p>
+                  <span style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
+                    {formatarTempo(post.created_at)}
+                  </span>
+                </div>
 
                 {/* BOTÕES DE EDITAR E APAGAR (APENAS PARA O DONO DO POST) */}
                 {eMeuPost && (
