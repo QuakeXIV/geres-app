@@ -65,13 +65,13 @@ export default async function handler(req, res) {
 
 
  // Se houver um autor identificado, excluímo-lo usando o external_user_id
-   if (autorId) {
-      bodyPayload.filters = [
-        { field: "last_session", relation: ">", hours_ago: "240" },
-        { operator: "AND" },
-        { field: "external_user_id", relation: "!=", value: autorId }
-      ];
-    }
+//    if (autorId) {
+//       bodyPayload.filters = [
+//         { field: "last_session", relation: ">", hours_ago: "240" },
+//         { operator: "AND" },
+//         { field: "external_user_id", relation: "!=", value: autorId }
+//       ];
+//     }
 
     const response = await fetch("https://onesignal.com/api/v1/notifications", {
       method: "POST",
