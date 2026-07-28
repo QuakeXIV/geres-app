@@ -16,7 +16,10 @@ import { Home, Beer, Target, LayoutGrid, LogOut, Sun, BookOpen, BarChart3, Shopp
 
 export default function App() {
   const [session, setSession] = useState(null);
-  const [tab, setTab] = useState('feed');
+  const [tab, setTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('tab') || 'feed';
+  });
   const oneSignalInitRef = useRef(false); // <--- O SEGREDO PARA NÃO REBENTAR
 
   useEffect(() => {
