@@ -27,25 +27,26 @@ export default async function handler(req, res) {
     const payload = req.body;
 
     // Novo Post no Feed
-    if (payload.table === 'feed' && payload.type === 'INSERT') {
+    // Novo Post no Feed
+    if (payload.table === 'posts' && payload.type === 'INSERT') {
       title = "Temos conteúdo novo! 🍺";
       message = "Alguém acabou de publicar no feed, vai cuscar!";
       targetTab = "feed";
     }
     
-    // Tribunal (Missão Aprovada) - Ajusta o nome da tabela se for diferente
-    else if (payload.table === 'missoes' && payload.type === 'UPDATE' && payload.record.status === 'aprovado') {
+    // Tribunal / Desafios Aprovados
+    else if (payload.table === 'challenge_approvals' && (payload.type === 'INSERT' || payload.type === 'UPDATE')) {
       title = "Missão Aprovada! ⚖️";
       message = "O Tribunal falou! Alguém vai ter de beber...";
       targetTab = "missoes";
     }
 
-    // O Livro (Nova Citação)
-    else if (payload.table === 'livro' && payload.type === 'INSERT') {
+    // O Livro (Tasca Quotes)
+    else if (payload.table === 'tasca_quotes' && payload.type === 'INSERT') {
       title = "Nova pérola no Livro! 📖";
       message = "Mais uma frase mítica para a história do Gerês.";
       targetTab = "livro";
-    } 
+    }
     
     else {
       return res.status(200).json({ message: 'Ação ignorada (não precisa de notificação)' });

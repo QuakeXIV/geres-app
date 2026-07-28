@@ -89,7 +89,7 @@ export default function Feed({ session }) {
 
   // APAGAR POST
   function pedirParaApagar(postId) {
-    setPostToDelete(postId); // Abre a nossa janela customizada
+    setPostToDelete(postId);
   }
 
   async function confirmarApagarPost() {
@@ -100,7 +100,7 @@ export default function Feed({ session }) {
       showToast(`Erro ao apagar: ${error.message}`, 'error');
     } else {
       showToast('Publicação apagada! 🗑️', 'success');
-      setPostToDelete(null); // Fecha a janela
+      setPostToDelete(null);
       carregarPosts();
     }
   }
@@ -343,25 +343,25 @@ export default function Feed({ session }) {
         <Plus size={32} />
       </button>
 
-      {/* MODAL DE CONFIRMAÇÃO CUSTOMIZADO */}
+      {/* MODAL DE CONFIRMAÇÃO CUSTOMIZADO (CENTRADO COM RIGOR) */}
       {postToDelete && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
           background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 9999,
-          display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px'
+          display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px', boxSizing: 'border-box', margin: 0
         }}>
-          <div className="card" style={{ width: '100%', maxWidth: '320px', textAlign: 'center', margin: 0, padding: '25px 20px', animation: 'scaleIn 0.2s ease-out' }}>
+          <div style={{ width: '100%', maxWidth: '320px', textAlign: 'center', background: 'var(--bg-card, #ffffff)', borderRadius: '20px', padding: '25px 20px', boxShadow: '0 10px 25px rgba(0,0,0,0.3)', boxSizing: 'border-box' }}>
             <div style={{ background: '#fee2e2', width: '50px', height: '50px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px auto' }}>
               <Trash2 size={24} color="#ef4444" />
             </div>
-            <h3 style={{ margin: '0 0 10px 0', fontSize: '20px' }}>Apagar Publicação?</h3>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '20px', color: 'var(--text)' }}>Apagar Publicação?</h3>
             <p style={{ color: 'var(--text-dim)', fontSize: '14px', margin: '0 0 20px 0' }}>
               Isto vai desaparecer para sempre do feed. Tens a certeza absoluta?
             </p>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
               <button
                 onClick={() => setPostToDelete(null)}
-                style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', background: '#f1f5f9', color: 'var(--text)', fontWeight: 'bold', cursor: 'pointer' }}
+                style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', background: '#f1f5f9', color: '#334155', fontWeight: 'bold', cursor: 'pointer' }}
               >
                 Cancelar
               </button>
