@@ -68,7 +68,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         app_id: ONESIGNAL_APP_ID,
-        include_external_user_ids: [req.body?.userId || "b9b41563-39a7-4658-8d84-a596ec5c5256"], // Manda para ti diretamente
+        included_segments: ["All"], // Manda para ti diretamente
         headings: { en: title },
         contents: { en: message },
         url: `https://geres-app.vercel.app/?tab=${targetTab}`
