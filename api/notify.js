@@ -9,6 +9,7 @@ export default async function handler(req, res) {
   let title = "";
   let message = "";
   let targetTab = "feed";
+  let autorId = null;
 
   if (req.query.tipo === 'camara') {
     title = "As fotos foram reveladas! 📸";
@@ -16,6 +17,7 @@ export default async function handler(req, res) {
     targetTab = "camera";
   } else if (req.body && req.body.table) {
     const payload = req.body;
+    autorId = payload.record?.user_id; // O ID de quem fez a ação
 
     if (payload.table === 'posts' && payload.type === 'INSERT') {
       title = "Temos conteúdo novo! 🍺";
@@ -44,6 +46,13 @@ export default async function handler(req, res) {
       contents: { en: message },
       url: `https://geres-app.vercel.app/?tab=${targetTab}`
     };
+
+    // Exclusão limpa por external_user_id suportada pela API do OneSignal
+    if (autorId) {
+      bodyPayload.filters = [
+        { field: "external_user_id", relation: "!=", value: autorId }
+      ];
+    }
 
     const response = await fetch("https://onesignal.com/api/v1/notifications", {
       method: "POST",
