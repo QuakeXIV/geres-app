@@ -16,8 +16,23 @@ export default function Livro({ session }) {
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 4000);
   }
 
+  // A MÁGICA DE RECARREGAR AUTOMATICAMENTE ESTÁ AQUI
   useEffect(() => {
     carregarQuotes();
+
+    const recarregarSeVisivel = () => {
+      if (document.visibilityState === 'visible') {
+        carregarQuotes();
+      }
+    };
+
+    document.addEventListener('visibilitychange', recarregarSeVisivel);
+    window.addEventListener('focus', recarregarSeVisivel);
+
+    return () => {
+      document.removeEventListener('visibilitychange', recarregarSeVisivel);
+      window.removeEventListener('focus', recarregarSeVisivel);
+    };
   }, []);
 
   async function carregarQuotes() {

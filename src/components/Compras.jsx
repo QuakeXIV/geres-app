@@ -13,8 +13,23 @@ export default function Compras({ session }) {
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 4000);
   }
 
+  // A MÁGICA DE RECARREGAR AUTOMATICAMENTE ESTÁ AQUI
   useEffect(() => {
     carregarLista();
+
+    const recarregarSeVisivel = () => {
+      if (document.visibilityState === 'visible') {
+        carregarLista();
+      }
+    };
+
+    document.addEventListener('visibilitychange', recarregarSeVisivel);
+    window.addEventListener('focus', recarregarSeVisivel);
+
+    return () => {
+      document.removeEventListener('visibilitychange', recarregarSeVisivel);
+      window.removeEventListener('focus', recarregarSeVisivel);
+    };
   }, []);
 
   async function carregarLista() {

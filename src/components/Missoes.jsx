@@ -59,6 +59,7 @@ export default function Missoes({ session }) {
     "Fazer de conta que não conheces alguém do grupo durante 15 minutos."
   ];
 
+  // A MÁGICA DE RECARREGAR AUTOMATICAMENTE ESTÁ AQUI
   useEffect(() => {
     const d = new Date();
     const str = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
@@ -78,6 +79,20 @@ export default function Missoes({ session }) {
     setIndicesHoje([i1, i2, i3]);
 
     carregarDados(str);
+
+    const recarregarSeVisivel = () => {
+      if (document.visibilityState === 'visible') {
+        carregarDados(str);
+      }
+    };
+
+    document.addEventListener('visibilitychange', recarregarSeVisivel);
+    window.addEventListener('focus', recarregarSeVisivel);
+
+    return () => {
+      document.removeEventListener('visibilitychange', recarregarSeVisivel);
+      window.removeEventListener('focus', recarregarSeVisivel);
+    };
   }, []);
 
   async function carregarDados(dataHoje) {
