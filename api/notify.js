@@ -63,14 +63,14 @@ export default async function handler(req, res) {
       url: `https://geres-app.vercel.app/?tab=${targetTab}`
     };
 
-    
+
  // Se houver um autor identificado, excluímo-lo usando o external_user_id
-    if (autorId) {
+   if (autorId) {
       bodyPayload.filters = [
-        { field: "any", relation: ">", hours_ago: "48" }, // obrigatório para manter o segmento All se usares filtros complexos, ou simplesmente:
+        { field: "last_session", relation: ">", hours_ago: "240" },
+        { operator: "AND" },
+        { field: "external_user_id", relation: "!=", value: autorId }
       ];
-      // Alternativa oficial do OneSignal para excluir por external_user_id:
-      bodyPayload.excluded_player_ids = []; // (se tivesses o player_id)
     }
 
     const response = await fetch("https://onesignal.com/api/v1/notifications", {
