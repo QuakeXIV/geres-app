@@ -9,33 +9,51 @@ export default async function handler(req, res) {
   let title = "";
   let message = "";
   let targetTab = "feed";
+  let autorId = null; // ID de quem executou a ação
 
+  // 1. LÓGICA DO CRON (Câmara Descartável - esta continua a ir para todos)
   if (req.query.tipo === 'camara') {
     title = "As fotos foram reveladas! 📸";
     message = "Corre para a Câmara Descartável para ver as figuras de ontem à noite!";
     targetTab = "camera";
-  } else if (req.body && req.body.table) {
+  } 
+  
+  // 2. LÓGICA DO SUPABASE (Posts, Tribunal, Livro)
+  else if (req.body && req.body.table) {
     const payload = req.body;
+    autorId = payload.record?.user_id; // Captura quem fez a ação
 
+    // Novo Post no Feed
     if (payload.table === 'posts' && payload.type === 'INSERT') {
       title = "Temos conteúdo novo! 🍺";
       message = "Alguém acabou de publicar no feed, vai cuscar!";
       targetTab = "feed";
-    } else if (payload.table === 'challenge_approvals' && (payload.type === 'INSERT' || payload.type === 'UPDATE')) {
+    }
+    
+    // Tribunal (Missão Aprovada)
+    else if (payload.table === 'challenge_approvals' && (payload.type === 'INSERT' || payload.type === 'UPDATE')) {
       title = "Missão Aprovada! ⚖️";
       message = "O Tribunal falou! Alguém vai ter de beber...";
       targetTab = "missoes";
-    } else if (payload.table === 'tasca_quotes' && payload.type === 'INSERT') {
+    }
+
+    // O Livro (Nova Citação)
+    else if (payload.table === 'tasca_quotes' && payload.type === 'INSERT') {
       title = "Nova pérola no Livro! 📖";
       message = "Mais uma frase mítica para a história do Gerês.";
       targetTab = "livro";
-    } else {
-      return res.status(200).json({ message: 'Ação ignorada' });
+    } 
+    
+    else {
+      return res.status(200).json({ message: 'Ação ignorada (não precisa de notificação)' });
     }
-  } else {
+  } 
+  
+  else {
     return res.status(400).json({ error: 'Pedido inválido' });
   }
 
+  // 3. DISPARAR PARA O ONESIGNAL (Excluindo o próprio autor)
   try {
     const bodyPayload = {
       app_id: ONESIGNAL_APP_ID,
@@ -44,6 +62,14 @@ export default async function handler(req, res) {
       contents: { en: message },
       url: `https://geres-app.vercel.app/?tab=${targetTab}`
     };
+
+
+ // Se houver um autor identificado, excluímo-lo usando o external_user_id
+//  if (autorId) {
+//       bodyPayload.filters = [
+//         { field: "tag", key: "user_id", relation: "!=", value: autorId }
+//       ];
+//     }
 
     const response = await fetch("https://onesignal.com/api/v1/notifications", {
       method: "POST",
