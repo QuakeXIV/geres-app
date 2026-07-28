@@ -68,7 +68,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         app_id: ONESIGNAL_APP_ID,
-        included_segments: ["Subscribed Users"],
+        included_segments: ["All"],
         headings: { en: title },
         contents: { en: message },
         url: `https://geres-app.vercel.app/?tab=${targetTab}` // Deep Linking em ação!
