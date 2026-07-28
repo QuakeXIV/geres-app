@@ -20,7 +20,7 @@ export default function App() {
     const params = new URLSearchParams(window.location.search);
     return params.get('tab') || 'feed';
   });
-  const oneSignalInitRef = useRef(false); // <--- O SEGREDO PARA NÃO REBENTAR
+  const oneSignalInitRef = useRef(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -43,7 +43,7 @@ export default function App() {
           appId: "2505560e-8033-4528-997c-eca674fa3230",
           allowLocalhostAsSecureOrigin: true,
           notifyButton: {
-            enable: true, // Isto força o sininho a aparecer no canto inferior esquerdo
+            enable: true,
           },
         });
       } catch (error) {
@@ -54,13 +54,19 @@ export default function App() {
     startOneSignal();
   }, []);
 
-  // 2. O TRUQUE DE MESTRE: DIZ AO ONESIGNAL QUEM É O UTILIZADOR
+  // 2. ASSOCIA O UTILIZADOR E DEFINE A TAG PARA O FILTRO DA VERCEL
   useEffect(() => {
     if (session?.user?.id) {
       try {
         OneSignal.login(session.user.id);
+        // Atribui a tag exata que o backend usa para filtrar o autor
+        if (OneSignal.User) {
+          OneSignal.User.addTag("app_user_id", session.user.id);
+        } else {
+          OneSignal.sendTag("app_user_id", session.user.id);
+        }
       } catch (e) {
-        console.log("OneSignal login erro:", e);
+        console.log("OneSignal login/tag erro:", e);
       }
     }
   }, [session]);
@@ -101,7 +107,6 @@ export default function App() {
     textAlign: 'center'
   };
 
-  // Função manual para forçar o pedido na Apple
   const pedirNotificacoes = () => {
     OneSignal.Slidedown.promptPush();
   };
@@ -145,7 +150,6 @@ export default function App() {
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
               
-              {/* NOVO CARTÃO: ATIVAR NOTIFICAÇÕES */}
               <div style={menuCardStyle} onClick={pedirNotificacoes}>
                 <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
                   <Bell size={28} color="var(--accent)" />
