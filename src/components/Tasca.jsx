@@ -153,9 +153,8 @@ export default function Tasca({ session }) {
         </div>
       )}
 
-      {/* BOTÃO DE REFRESH MANUAL NO TOPO */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
-        <button onClick={carregarDadosTasca} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #e2e8f0', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+        <button onClick={carregarDadosTasca} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
           <RefreshCw size={16} /> {isRefreshing ? 'A atualizar...' : 'Atualizar Tasca'}
         </button>
       </div>
@@ -175,7 +174,7 @@ export default function Tasca({ session }) {
             onClick={() => setSubTab('putometros')}
             style={{ background: subTab === 'putometros' ? 'white' : 'rgba(255,255,255,0.2)', color: subTab === 'putometros' ? 'var(--accent)' : 'white', border: 'none', padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' }}
           >
-            📖 Tabela de Putómetros
+            📖 Putómetros
           </button>
         </div>
       </div>
@@ -229,7 +228,13 @@ export default function Tasca({ session }) {
               </p>
             ) : (
               leaderboard.map((item, index) => (
-                <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', margin: '8px 0', background: index === 0 ? '#fef08a' : '#f8fafc', borderRadius: '12px', border: index === 0 ? '2px solid #eab308' : '1px solid #e2e8f0' }}>
+                <div key={index} style={{ 
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+                  padding: '12px 15px', margin: '8px 0', 
+                  background: index === 0 ? 'rgba(234, 179, 8, 0.15)' : 'var(--input-bg)', 
+                  borderRadius: '12px', 
+                  border: index === 0 ? '2px solid #eab308' : '1px solid var(--border)' 
+                }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <span style={{ fontSize: '18px', fontWeight: 'bold', width: '25px', textAlign: 'center' }}>
                       {index === 0 ? '👑' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
@@ -253,7 +258,7 @@ export default function Tasca({ session }) {
               <p style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '13px' }}>Sem registos recentes.</p>
             ) : (
               drinks.map((drink) => (
-                <div key={drink.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', marginBottom: '8px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                <div key={drink.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', marginBottom: '8px', background: 'var(--input-bg)', borderRadius: '10px', border: '1px solid var(--border)' }}>
                   <div>
                     <span style={{ fontWeight: 'bold', fontSize: '14px', color: 'var(--accent)' }}>@{drink.profiles?.username}</span>
                     <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: 'var(--text)' }}>
@@ -287,12 +292,12 @@ export default function Tasca({ session }) {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {tabelaPutometros.map((bebida) => (
-              <div key={bebida.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <div key={bebida.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'var(--input-bg)', borderRadius: '10px', border: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <span style={{ fontSize: '24px' }}>{bebida.icone}</span>
                   <span style={{ fontWeight: 'bold', fontSize: '15px', color: 'var(--text)' }}>{bebida.nome}</span>
                 </div>
-                <div style={{ background: '#ffedd5', color: 'var(--accent)', padding: '6px 12px', borderRadius: '12px', fontWeight: '800', fontSize: '14px' }}>
+                <div style={{ background: 'rgba(249, 115, 22, 0.15)', color: 'var(--accent)', padding: '6px 12px', borderRadius: '12px', fontWeight: '800', fontSize: '14px' }}>
                   +{bebida.putometro} Pts
                 </div>
               </div>

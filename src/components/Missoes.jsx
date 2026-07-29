@@ -154,7 +154,6 @@ export default function Missoes({ session }) {
   async function aprovarDesafio(request) {
     setLoadingAction(`aprovar-${request.id}`);
 
-    // 1. Regista o teu voto
     const { error: insertError } = await supabase.from('challenge_approvals').insert([{
       request_id: request.id,
       approver_id: session.user.id
@@ -169,30 +168,11 @@ export default function Missoes({ session }) {
     const novosVotos = request.approvalCount + 1;
     const faltam = 3 - novosVotos;
 
-    // 2. Se com o teu voto chegou a 3, muda o status para completed!
     if (novosVotos >= 3) {
       await supabase.from('challenge_requests').update({ status: 'completed' }).eq('id', request.id);
       showToast('Aprovado! Essa pessoa acabou de ganhar 1 ponto! 🎯', 'success');
     } else {
       showToast(`Aprovado! Faltam ${faltam} votos. 👍`, 'success');
-    }
-
-    // 3. ENVIA A NOTIFICAÇÃO
-    try {
-      const { data: profile } = await supabase.from('profiles').select('username').eq('id', session.user.id).single();
-      await fetch('https://geres-app.vercel.app/api/notify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'mission_approval',
-          actorName: profile?.username || 'Alguém',
-          targetId: request.user_id, // Vai apenas para o dono do desafio
-          actingId: session.user.id,
-          votosFaltam: faltam < 0 ? 0 : faltam
-        })
-      });
-    } catch (err) {
-      console.log("Erro a notificar:", err);
     }
 
     await carregarDados(todayStr);
@@ -208,14 +188,12 @@ export default function Missoes({ session }) {
         </div>
       )}
 
-      {/* BOTÃO DE REFRESH MANUAL NO TOPO */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
-        <button onClick={() => carregarDados(todayStr)} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #e2e8f0', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+        <button onClick={() => carregarDados(todayStr)} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
           <RefreshCw size={16} /> {isRefreshing ? 'A atualizar...' : 'Atualizar Missões'}
         </button>
       </div>
 
-      {/* CABEÇALHO */}
       <div className="card" style={{ textAlign: 'center', background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', color: 'white' }}>
         <h2 style={{ margin: '0 0 5px 0', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
           <ShieldAlert size={26} /> Missões Diárias
@@ -251,7 +229,6 @@ export default function Missoes({ session }) {
         </div>
       </div>
 
-      {/* ABA: DESAFIOS DE HOJE */}
       {subTab === 'diarios' && (
         <div className="card">
           <h3 style={{ margin: '0 0 12px 0', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -268,13 +245,13 @@ export default function Missoes({ session }) {
 
               return (
                 <div key={localIndex} style={{ 
-                  background: isCompleted ? '#f0fdf4' : isPending ? '#fefce8' : '#f8fafc', 
-                  border: isCompleted ? '2px solid #22c55e' : isPending ? '2px solid #eab308' : '1px solid #e2e8f0', 
+                  background: isCompleted ? 'rgba(34, 197, 94, 0.1)' : isPending ? 'rgba(234, 179, 8, 0.1)' : 'var(--input-bg)', 
+                  border: isCompleted ? '2px solid #22c55e' : isPending ? '2px solid #eab308' : '1px solid var(--border)', 
                   borderRadius: '12px', padding: '15px', transition: 'all 0.3s'
                 }}>
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                     <div style={{ marginTop: '2px' }}>
-                      {isCompleted ? <CheckCircle size={24} color="#22c55e" /> : isPending ? <Clock size={24} color="#eab308" /> : <Circle size={24} color="#94a3b8" />}
+                      {isCompleted ? <CheckCircle size={24} color="#22c55e" /> : isPending ? <Clock size={24} color="#eab308" /> : <Circle size={24} color="var(--text-dim)" />}
                     </div>
                     <div style={{ flex: 1 }}>
                       <p style={{ margin: '0 0 12px 0', fontSize: '15px', color: 'var(--text)', fontWeight: isCompleted ? 'normal' : '500', textDecoration: isCompleted ? 'line-through' : 'none' }}>
@@ -293,13 +270,13 @@ export default function Missoes({ session }) {
                       )}
 
                       {isPending && (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#fef08a', color: '#854d0e', padding: '6px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(234, 179, 8, 0.2)', color: '#ca8a04', padding: '6px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold' }}>
                           <Clock size={16} /> A aguardar aprovação ({meuRegisto.approvalCount}/3)
                         </div>
                       )}
 
                       {isCompleted && (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#dcfce7', color: '#166534', padding: '6px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(34, 197, 94, 0.2)', color: '#22c55e', padding: '6px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold' }}>
                           <CheckCircle size={16} /> Feito e Aprovado! ✅
                         </div>
                       )}
@@ -312,7 +289,6 @@ export default function Missoes({ session }) {
         </div>
       )}
 
-      {/* ABA: TRIBUNAL */}
       {subTab === 'tribunal' && (
         <div className="card">
           <h3 style={{ margin: '0 0 12px 0', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -323,7 +299,7 @@ export default function Missoes({ session }) {
           </p>
 
           {tribunalRequests.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '20px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+            <div style={{ textAlign: 'center', padding: '20px', background: 'var(--input-bg)', borderRadius: '12px', border: '1px dashed var(--border)' }}>
               <span style={{ fontSize: '30px', display: 'block', marginBottom: '10px' }}>⚖️</span>
               <p style={{ margin: 0, color: 'var(--text-dim)' }}>O tribunal está limpo. Não há pendentes.</p>
             </div>
@@ -335,10 +311,10 @@ export default function Missoes({ session }) {
                 const textDesafio = todosDesafios[req.challenge_index];
 
                 return (
-                  <div key={req.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '15px' }}>
+                  <div key={req.id} style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '12px', padding: '15px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                       <span style={{ fontWeight: 'bold', color: 'var(--accent)' }}>@{req.username}</span>
-                      <span style={{ fontSize: '12px', background: '#e2e8f0', padding: '2px 8px', borderRadius: '10px', fontWeight: 'bold' }}>
+                      <span style={{ fontSize: '12px', background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-dim)', padding: '2px 8px', borderRadius: '10px', fontWeight: 'bold' }}>
                         {req.approvalCount}/3 Votos
                       </span>
                     </div>
@@ -347,7 +323,7 @@ export default function Missoes({ session }) {
                     </p>
                     
                     {jaAprovei ? (
-                      <div style={{ background: '#e0f2fe', color: '#0369a1', padding: '8px', borderRadius: '8px', textAlign: 'center', fontSize: '13px', fontWeight: 'bold' }}>
+                      <div style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', padding: '8px', borderRadius: '8px', textAlign: 'center', fontSize: '13px', fontWeight: 'bold' }}>
                         Tu já votaste a favor! 👍
                       </div>
                     ) : (
@@ -367,7 +343,6 @@ export default function Missoes({ session }) {
         </div>
       )}
 
-      {/* ABA: LEADERBOARD */}
       {subTab === 'leaderboard' && (
         <div className="card">
           <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -380,7 +355,7 @@ export default function Missoes({ session }) {
             </p>
           ) : (
             leaderboard.map((item, index) => (
-              <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', margin: '8px 0', background: index === 0 ? '#fef08a' : '#f8fafc', borderRadius: '12px', border: index === 0 ? '2px solid #eab308' : '1px solid #e2e8f0' }}>
+              <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', margin: '8px 0', background: index === 0 ? 'rgba(234, 179, 8, 0.15)' : 'var(--input-bg)', borderRadius: '12px', border: index === 0 ? '2px solid #eab308' : '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span style={{ fontSize: '18px', fontWeight: 'bold', width: '25px', textAlign: 'center' }}>
                     {index === 0 ? '👑' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
