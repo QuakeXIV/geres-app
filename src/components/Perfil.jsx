@@ -7,6 +7,12 @@ export default function Perfil({ session }) {
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
+
+  function showToast(message, type = 'success') {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: '' }), 4000);
+  }
 
   useEffect(() => {
     carregarPerfil();
@@ -43,7 +49,7 @@ export default function Perfil({ session }) {
       const fileExt = file.name.split('.').pop();
       const filePath = `avatars/${session.user.id}-${Math.random()}.${fileExt}`;
 
-      // Envia para o storage (pasta media ou cria uma pasta avatars no teu bucket)
+      // Envia para o storage (pasta media)
       const { error: uploadError } = await supabase.storage
         .from('media')
         .upload(filePath, file);
@@ -56,9 +62,9 @@ export default function Perfil({ session }) {
       await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', session.user.id);
       
       setAvatarUrl(publicUrl);
-      alert('Foto de perfil atualizada com sucesso!');
+      showToast('Foto de perfil atualizada com sucesso! 📸', 'success');
     } catch (error) {
-      alert(`Erro a enviar foto: ${error.message}`);
+      showToast(`Erro a enviar foto: ${error.message}`, 'error');
     } finally {
       setUploading(false);
     }
@@ -67,8 +73,11 @@ export default function Perfil({ session }) {
   async function atualizarNome(e) {
     e.preventDefault();
     const { error } = await supabase.from('profiles').update({ username }).eq('id', session.user.id);
-    if (error) alert(error.message);
-    else alert('Nome atualizado!');
+    if (error) {
+      showToast(error.message, 'error');
+    } else {
+      showToast('Nome atualizado com sucesso! ✍️', 'success');
+    }
   }
 
   function toggleTheme() {
@@ -80,6 +89,13 @@ export default function Perfil({ session }) {
 
   return (
     <div style={{ padding: '10px', paddingBottom: 'calc(130px + env(safe-area-inset-bottom))' }}>
+      
+      {/* O NOSSO TOAST BONITO */}
+      {toast.show && (
+        <div className={`custom-toast ${toast.type === 'error' ? 'toast-error' : 'toast-success'}`} style={{ position: 'fixed', top: 'calc(60px + env(safe-area-inset-top))', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, width: '90%', maxWidth: '400px' }}>
+          {toast.message}
+        </div>
+      )}
       
       <div className="card" style={{ textAlign: 'center', background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', color: 'white' }}>
         <h2 style={{ margin: '0 0 5px 0', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>

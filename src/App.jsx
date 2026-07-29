@@ -23,7 +23,6 @@ export default function App() {
   });
   const oneSignalInitRef = useRef(false);
 
-  // ESTADO PARA O ALERTA E PARA O TOGGLE
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [pushEnabled, setPushEnabled] = useState(false);
 
@@ -42,7 +41,6 @@ export default function App() {
     });
   }, []);
 
-  // 1. INICIA O ONESIGNAL E LÊ O ESTADO ATUAL DAS NOTIFICAÇÕES
   useEffect(() => {
     if (oneSignalInitRef.current) return;
     oneSignalInitRef.current = true; 
@@ -52,10 +50,9 @@ export default function App() {
         await OneSignal.init({
           appId: "2505560e-8033-4528-997c-eca674fa3230",
           allowLocalhostAsSecureOrigin: true,
-          notifyButton: { enable: false }, // Escondemos o sino feio default
+          notifyButton: { enable: false }, 
         });
 
-        // Verifica se o gajo já tem notificações ativas neste telemóvel/PC
         if (OneSignal.User && OneSignal.User.PushSubscription) {
           const isAtivo = OneSignal.User.PushSubscription.optedIn;
           setPushEnabled(isAtivo);
@@ -68,7 +65,6 @@ export default function App() {
     startOneSignal();
   }, []);
 
-  // 2. ASSOCIA O UTILIZADOR E DEFINE A TAG
   useEffect(() => {
     if (session?.user?.id) {
       try {
@@ -84,7 +80,6 @@ export default function App() {
     }
   }, [session]);
 
-  // Mantém o modo escuro a funcionar ao arrancar a app
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
@@ -109,10 +104,9 @@ export default function App() {
     display: 'flex', flexDirection: 'column', alignItems: 'center',
     justifyContent: 'center', gap: '10px', boxShadow: '0 4px 10px rgba(0,0,0,0.03)',
     border: '1px solid var(--border)', cursor: 'pointer', transition: 'transform 0.2s',
-    textAlign: 'center', position: 'relative', height: '100%'
+    textAlign: 'center', position: 'relative', height: '100%', boxSizing: 'border-box'
   };
 
-  // 3. TOGGLE DE NOTIFICAÇÕES REAL E INTUITIVO
   const toggleNotificacoes = async () => {
     try {
       if (OneSignal.User && OneSignal.User.PushSubscription) {
@@ -134,7 +128,6 @@ export default function App() {
 
   return (
     <div>
-      {/* O NOSSO TOAST BONITO */}
       {toast.show && (
         <div style={{
           position: 'fixed', top: 'calc(60px + env(safe-area-inset-top))', left: '50%', transform: 'translateX(-50%)',
@@ -179,12 +172,12 @@ export default function App() {
         {tab === 'arena' && <Arena session={session} />}
         {tab === 'perfil' && <Perfil session={session} />}
         
-        {/* O NOVO MENU BONITÃO */}
+        {/* MENU PRINCIPAL (DESIGN CORRIGIDO) */}
         {tab === 'menu' && (
-          <div style={{ padding: '10px' }}>
+          <div style={{ padding: '15px' }}>
             
-            {/* CABEÇALHO DO MENU */}
-            <div className="card" style={{ textAlign: 'center', background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', color: 'white', padding: '20px' }}>
+            {/* CABEÇALHO DO MENU COM A COR CORRETA E MARGEM */}
+            <div className="card" style={{ margin: '0 0 25px 0', textAlign: 'center', background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', color: 'white', padding: '20px' }}>
               <h2 style={{ margin: '0 0 5px 0', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
                 <LayoutGrid size={26} /> Menu da App
               </h2>
@@ -192,17 +185,17 @@ export default function App() {
             </div>
 
             {/* SECÇÃO 1: O TEU ESPAÇO */}
-            <h3 style={{ margin: '20px 0 10px 10px', fontSize: '14px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            <h3 style={{ margin: '0 0 10px 5px', fontSize: '13px', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>
               👤 O Teu Espaço
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '30px' }}>
               
               <div style={menuCardStyle} onClick={() => setTab('perfil')}>
-                <div style={{ background: '#dbeafe', padding: '12px', borderRadius: '50%' }}>
-                  <User size={24} color="#3b82f6" />
+                <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
+                  <User size={24} color="var(--accent)" />
                 </div>
                 <div>
-                  <h4 style={{ margin: '0 0 2px 0', color: 'var(--text)', fontSize: '15px' }}>Perfil</h4>
+                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>Perfil</h4>
                   <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Foto e Tema</p>
                 </div>
               </div>
@@ -220,7 +213,7 @@ export default function App() {
                   {pushEnabled ? <Bell size={24} color="#16a34a" /> : <BellOff size={24} color="#dc2626" />}
                 </div>
                 <div>
-                  <h4 style={{ margin: '0 0 2px 0', color: 'var(--text)', fontSize: '15px' }}>Alertas</h4>
+                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>Alertas</h4>
                   <p style={{ margin: 0, fontSize: '11px', fontWeight: 'bold', color: pushEnabled ? '#16a34a' : '#dc2626' }}>
                     {pushEnabled ? 'LIGADOS' : 'DESLIGADOS'}
                   </p>
@@ -229,17 +222,17 @@ export default function App() {
             </div>
 
             {/* SECÇÃO 2: A VIAGEM */}
-            <h3 style={{ margin: '25px 0 10px 10px', fontSize: '14px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            <h3 style={{ margin: '0 0 10px 5px', fontSize: '13px', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>
               🚌 A Viagem
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '30px' }}>
               
               <div style={menuCardStyle} onClick={() => setTab('livro')}>
                 <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
                   <BookOpen size={24} color="var(--accent)" />
                 </div>
                 <div>
-                  <h4 style={{ margin: '0 0 2px 0', color: 'var(--text)', fontSize: '15px' }}>O Livro</h4>
+                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>O Livro</h4>
                   <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Frases míticas</p>
                 </div>
               </div>
@@ -249,7 +242,7 @@ export default function App() {
                   <Camera size={24} color="var(--accent)" />
                 </div>
                 <div>
-                  <h4 style={{ margin: '0 0 2px 0', color: 'var(--text)', fontSize: '15px' }}>Câmara</h4>
+                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>Câmara</h4>
                   <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Descartável</p>
                 </div>
               </div>
@@ -259,7 +252,7 @@ export default function App() {
                   <BarChart3 size={24} color="var(--accent)" />
                 </div>
                 <div>
-                  <h4 style={{ margin: '0 0 2px 0', color: 'var(--text)', fontSize: '15px' }}>Estatísticas</h4>
+                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>Estatísticas</h4>
                   <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Gerês Wrapped</p>
                 </div>
               </div>
@@ -269,18 +262,18 @@ export default function App() {
                   <ShoppingCart size={24} color="#10b981" />
                 </div>
                 <div>
-                  <h4 style={{ margin: '0 0 2px 0', color: 'var(--text)', fontSize: '15px' }}>Radar da Fome</h4>
+                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>Radar Fome</h4>
                   <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Compras</p>
                 </div>
               </div>
             </div>
 
             {/* SECÇÃO 3: COMPETIÇÃO */}
-            <h3 style={{ margin: '25px 0 10px 10px', fontSize: '14px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            <h3 style={{ margin: '0 0 10px 5px', fontSize: '13px', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>
               ⚔️ Competição
             </h3>
             <div 
-              style={{ ...menuCardStyle, flexDirection: 'row', justifyContent: 'space-between', padding: '20px', background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', border: 'none' }}
+              style={{ ...menuCardStyle, flexDirection: 'row', justifyContent: 'space-between', padding: '20px', background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', border: 'none', margin: '0' }}
               onClick={() => setTab('arena')}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
