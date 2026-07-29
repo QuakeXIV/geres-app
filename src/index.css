@@ -1,12 +1,11 @@
-
 html {
   overscroll-behavior: none;
-  background-color: #fb923c; /* Se houver um micro-salto, mostra a cor do tema e não branco/cinza */
+  background-color: var(--bg-fallback, #fb923c);
 }
 
 :root {
-  /* Cores de Verão / Sunset */
-  --bg-primary: #ffedd5;
+  /* Cores de Verão / Sunset (MODO CLARO) */
+  --bg-fallback: #fb923c;
   --bg-gradient: linear-gradient(135deg, #fb923c 0%, #f43f5e 100%);
   --bg-card: rgba(255, 255, 255, 0.95);
   --accent: #f97316; /* Laranja vibrante */
@@ -14,10 +13,22 @@ html {
   --text: #1e293b;
   --text-dim: #64748b;
   --input-bg: #f8fafc;
+  --border: rgba(226, 232, 240, 0.8);
   
   /* Cores para os avisos */
   --success: #10b981;
   --error: #ef4444;
+}
+
+/* MODO ESCURO 🌙 */
+[data-theme='dark'] {
+  --bg-fallback: #0f172a;
+  --bg-gradient: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  --bg-card: rgba(30, 41, 59, 0.95);
+  --text: #f8fafc;
+  --text-dim: #94a3b8;
+  --input-bg: #0f172a;
+  --border: rgba(51, 65, 85, 0.8);
 }
 
 body {
@@ -29,17 +40,18 @@ body {
   justify-content: center;
   min-height: 100vh;
   background-attachment: fixed;
+  transition: color 0.3s ease; /* Transição suave do texto */
   
   /* TRUQUES NATIVOS */
-  -webkit-user-select: none; /* Impede selecionar texto no iPhone */
-  user-select: none; /* Impede selecionar texto nos outros */
-  -webkit-touch-callout: none; /* Tira aquele menu de "Guardar Imagem" ao premir */
-  -webkit-tap-highlight-color: transparent; /* Tira o quadrado azul ao clicar nos botões */
-  overscroll-behavior-y: none; /* Impede aquele efeito de "puxar para baixo para atualizar" */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
 }
 
 /* Permitir que os inputs possam ser selecionados para escrever o texto */
-input, textarea {
+input, textarea, select {
   -webkit-user-select: auto;
   user-select: auto;
 }
@@ -60,7 +72,8 @@ input, textarea {
   margin: 16px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--border);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .input-field {
@@ -68,12 +81,12 @@ input, textarea {
   padding: 14px;
   margin: 8px 0;
   border-radius: 10px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   background: var(--input-bg);
   color: var(--text);
   box-sizing: border-box;
   font-size: 15px;
-  transition: border-color 0.3s ease;
+  transition: border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease;
 }
 
 .input-field:focus {
@@ -102,10 +115,11 @@ input, textarea {
 }
 
 .btn-primary:disabled {
-  background: #cbd5e1;
+  background: var(--text-dim);
   box-shadow: none;
   transform: none;
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
 /* O nosso aviso customizado (Toast) */
@@ -134,11 +148,12 @@ input, textarea {
   bottom: 0;
   width: 100%;
   max-width: 480px;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--bg-card); /* Ajustado para mudar com o modo escuro */
   backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(255, 255, 255, 0.5);
+  border-top: 1px solid var(--border);
   display: flex;
   justify-content: space-around;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
   
   /* AQUI ESTÁ O SEGREDO: O env() calcula o espaço exato do traço do iPhone */
   padding-top: 12px;
@@ -152,7 +167,7 @@ input, textarea {
 .nav-btn {
   background: none;
   border: none;
-  color: #94a3b8; /* Cor cinza inativa */
+  color: var(--text-dim); /* Ajustado para bater certo com os 2 modos */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -164,7 +179,7 @@ input, textarea {
 }
 
 .nav-btn.active {
-  color: var(--accent); /* Fica laranja quando selecionado */
+  color: var(--accent);
   transform: translateY(-3px);
 }
 

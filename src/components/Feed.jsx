@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Heart, Send, Plus, X, Trash2, Edit2, Check, RefreshCw } from 'lucide-react';
+import { Heart, Send, Plus, X, Trash2, Edit2, Check, RefreshCw, User } from 'lucide-react';
 
 function formatarTempo(dataIso) {
   if (!dataIso) return '';
@@ -42,6 +42,7 @@ export default function Feed({ session }) {
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 4000);
   }
 
+  // A MÁGICA DE ATUALIZAR: Atualiza quando abres a app
   useEffect(() => {
     carregarPosts();
 
@@ -62,9 +63,10 @@ export default function Feed({ session }) {
 
   async function carregarPosts() {
     setIsRefreshing(true);
+    // VAI BUSCAR POSTS E AS FOTOS DE PERFIL (avatar_url)
     const { data, error } = await supabase
       .from('posts')
-      .select('*, profiles(username), likes(user_id), comments(*, profiles(username))')
+      .select('*, profiles(username, avatar_url), likes(user_id), comments(*, profiles(username))')
       .eq('is_disposable', false)
       .order('created_at', { ascending: false });
 
@@ -82,6 +84,7 @@ export default function Feed({ session }) {
         
       const actorName = profile?.username || 'Alguém';
 
+      // LINK ABSOLUTO PARA A VERCEL (Não falha)
       await fetch('https://geres-app.vercel.app/api/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -135,7 +138,7 @@ export default function Feed({ session }) {
 
       if (dbError) throw new Error(`Erro BD: ${dbError.message}`);
 
-      // ⚠️ NOVA LÓGICA: AVISA O GRUPO TODO COM O TEU NOME
+      // AVISA A MALTA PELO NOME DE QUEM PUBLICOU O POST
       try {
         const { data: profile } = await supabase.from('profiles').select('username').eq('id', session.user.id).single();
         await fetch('https://geres-app.vercel.app/api/notify', {
@@ -250,7 +253,7 @@ export default function Feed({ session }) {
 
       {/* BOTÃO DE REFRESH MANUAL */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
-        <button onClick={carregarPosts} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #e2e8f0', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+        <button onClick={carregarPosts} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
           <RefreshCw size={16} /> {isRefreshing ? 'A atualizar...' : 'Atualizar Feed'}
         </button>
       </div>
@@ -298,7 +301,7 @@ export default function Feed({ session }) {
       {posts.length === 0 ? (
         <div style={{
           textAlign: 'center', marginTop: '60px', padding: '30px 20px',
-          background: 'rgba(255, 255, 255, 0.6)', borderRadius: '16px',
+          background: 'var(--bg-card)', borderRadius: '16px',
           border: '2px dashed var(--accent)', backdropFilter: 'blur(5px)'
         }}>
           <span style={{ fontSize: '45px', display: 'block', marginBottom: '15px' }}>🏜️</span>
@@ -312,18 +315,30 @@ export default function Feed({ session }) {
           const jaDeuLike = post.likes?.some((l) => l.user_id === session.user.id);
           const eMeuPost = post.user_id === session.user.id;
           const aEditar = editingPostId === post.id;
+          
+          const avatar = post.profiles?.avatar_url;
 
           return (
             <div key={post.id} className="card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                 
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <p style={{ fontWeight: 'bold', margin: 0, color: 'var(--accent)', fontSize: '15px' }}>
-                    @{post.profiles?.username || 'Membro'}
-                  </p>
-                  <span style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
-                    {formatarTempo(post.created_at)}
-                  </span>
+                {/* CABEÇALHO DO POST COM FOTO DE PERFIL */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '50%', overflow: 'hidden', background: 'var(--input-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--accent)' }}>
+                    {avatar ? (
+                      <img src={avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <User size={20} color="var(--text-dim)" />
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <p style={{ fontWeight: 'bold', margin: 0, color: 'var(--text)', fontSize: '15px' }}>
+                      @{post.profiles?.username || 'Membro'}
+                    </p>
+                    <span style={{ fontSize: '12px', color: 'var(--text-dim)', marginTop: '2px' }}>
+                      {formatarTempo(post.created_at)}
+                    </span>
+                  </div>
                 </div>
 
                 {/* BOTÕES DE EDITAR E APAGAR */}
@@ -334,7 +349,7 @@ export default function Feed({ session }) {
                         setEditingPostId(post.id);
                         setEditCaptionText(post.caption || '');
                       }}
-                      style={{ background: '#f1f5f9', border: 'none', borderRadius: '6px', padding: '6px', cursor: 'pointer' }}
+                      style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px', cursor: 'pointer' }}
                       title="Editar legenda"
                     >
                       <Edit2 size={16} color="var(--text-dim)" />
@@ -374,9 +389,9 @@ export default function Feed({ session }) {
                   </button>
                   <button
                     onClick={() => setEditingPostId(null)}
-                    style={{ background: '#cbd5e1', border: 'none', borderRadius: '8px', padding: '0 10px', cursor: 'pointer' }}
+                    style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0 10px', cursor: 'pointer' }}
                   >
-                    <X size={18} color="#334155" />
+                    <X size={18} color="var(--text-dim)" />
                   </button>
                 </div>
               ) : (
@@ -389,14 +404,14 @@ export default function Feed({ session }) {
                   onClick={() => toggleLike(post.id, jaDeuLike, post.user_id)}
                 >
                   <Heart fill={jaDeuLike ? '#ef4444' : 'none'} size={24} />
-                  <span style={{ fontSize: '16px', fontWeight: 'bold' }}>{post.likes?.length || 0}</span>
+                  <span style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--text)' }}>{post.likes?.length || 0}</span>
                 </button>
               </div>
 
-              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '10px', marginTop: '10px' }}>
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '10px' }}>
                 {post.comments?.map((c) => (
                   <p key={c.id} style={{ fontSize: '13px', margin: '6px 0', color: 'var(--text)' }}>
-                    <span style={{ fontWeight: 'bold', color: 'var(--accent)' }}>@{c.profiles?.username}: </span>
+                    <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>@{c.profiles?.username}: </span>
                     {c.content}
                   </p>
                 ))}
@@ -444,7 +459,7 @@ export default function Feed({ session }) {
           background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 9999,
           display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px', boxSizing: 'border-box', margin: 0
         }}>
-          <div style={{ width: '100%', maxWidth: '320px', textAlign: 'center', background: 'var(--bg-card, #ffffff)', borderRadius: '20px', padding: '25px 20px', boxShadow: '0 10px 25px rgba(0,0,0,0.3)', boxSizing: 'border-box' }}>
+          <div style={{ width: '100%', maxWidth: '320px', textAlign: 'center', background: 'var(--bg-card)', borderRadius: '20px', padding: '25px 20px', boxShadow: '0 10px 25px rgba(0,0,0,0.3)', boxSizing: 'border-box' }}>
             <div style={{ background: '#fee2e2', width: '50px', height: '50px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px auto' }}>
               <Trash2 size={24} color="#ef4444" />
             </div>
@@ -455,7 +470,7 @@ export default function Feed({ session }) {
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
               <button
                 onClick={() => setPostToDelete(null)}
-                style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', background: '#f1f5f9', color: '#334155', fontWeight: 'bold', cursor: 'pointer' }}
+                style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)', fontWeight: 'bold', cursor: 'pointer' }}
               >
                 Cancelar
               </button>
