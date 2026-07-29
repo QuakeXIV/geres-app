@@ -66,43 +66,46 @@ export default function App() {
     }
   }
 
-  // 1. INICIA O ONESIGNAL (Lógica original que funciona 100%)
+  // 1. INICIAR O ONESIGNAL SEMPRE (Mesmo sem sessão ativa, para o Registo funcionar)
   useEffect(() => {
     if (oneSignalInitRef.current) return;
     oneSignalInitRef.current = true; 
 
-    async function startOneSignal() {
+    async function setupOneSignal() {
       try {
         await OneSignal.init({
           appId: "2505560e-8033-4528-997c-eca674fa3230",
           allowLocalhostAsSecureOrigin: true,
           notifyButton: { enable: false }, 
         });
-
+        
+        // Verifica se já estava ativo antes
         if (OneSignal.User && OneSignal.User.PushSubscription) {
-          const isAtivo = OneSignal.User.PushSubscription.optedIn;
-          setPushEnabled(isAtivo);
+          setPushEnabled(OneSignal.User.PushSubscription.optedIn);
+        } else if (OneSignal.isPushNotificationsEnabled) {
+          const isEnabled = await OneSignal.isPushNotificationsEnabled();
+          setPushEnabled(isEnabled);
         }
-      } catch (error) {
-        console.error("Erro ao iniciar OneSignal:", error);
+      } catch (error) { 
+        console.error("Erro crítico na inicialização do OneSignal:", error); 
       }
     }
-    
-    startOneSignal();
+    setupOneSignal();
   }, []);
 
-  // 2. ASSOCIA O UTILIZADOR E DEFINE A TAG
+  // 2. ASSOCIAR O UTILIZADOR E A TAG (Só acontece quando a sessão existe)
   useEffect(() => {
     if (session?.user?.id) {
       try {
-        OneSignal.login(session.user.id);
+        if (OneSignal.login) OneSignal.login(session.user.id);
+        
         if (OneSignal.User) {
           OneSignal.User.addTag("app_user_id", session.user.id);
         } else {
           OneSignal.sendTag("app_user_id", session.user.id);
         }
-      } catch (e) {
-        console.log("OneSignal login/tag erro:", e);
+      } catch (err) {
+        console.error("Erro a associar a Tag do utilizador:", err);
       }
     }
   }, [session]);
@@ -148,7 +151,6 @@ export default function App() {
     document.body.setAttribute('data-theme', novoTema);
   }
 
-  // 3. TOGGLE DE NOTIFICAÇÕES (Lógica original e à prova de bala)
   const toggleNotificacoes = async () => {
     try {
       if (OneSignal.User && OneSignal.User.PushSubscription) {
@@ -157,14 +159,25 @@ export default function App() {
           setPushEnabled(false); 
           showToast("Notificações desativadas 🔕", "error");
         } else {
-          await OneSignal.User.PushSubscription.optIn();
           if (OneSignal.Slidedown) await OneSignal.Slidedown.promptPush();
+          await OneSignal.User.PushSubscription.optIn();
           setPushEnabled(true); 
           showToast("Notificações ativadas 🔔", "success");
         }
+      } else if (OneSignal.isPushNotificationsEnabled) {
+        if (pushEnabled) {
+          await OneSignal.setSubscription(false);
+          setPushEnabled(false);
+          showToast("Notificações desativadas 🔕", "error");
+        } else {
+          await OneSignal.showSlidedownPrompt();
+          await OneSignal.setSubscription(true);
+          setPushEnabled(true);
+          showToast("Notificações ativadas 🔔", "success");
+        }
       }
-    } catch (error) {
-      console.error("Erro no toggle de notificações:", error);
+    } catch (error) { 
+      console.error("Erro notificações:", error);
     }
   };
 
@@ -173,10 +186,16 @@ export default function App() {
     setIsMenuOpen(false);
   }
 
-  // --- LÓGICA DE SCROLL (INSTAGRAM STYLE) ---
+  // --- LÓGICA DE SCROLL FORÇADA (INSTAGRAM STYLE) ---
+  function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.documentElement.scrollTop = 0; // Força no Android
+    document.body.scrollTop = 0; // Força no iOS/Safari
+  }
+
   function handleFeedClick() {
     if (tab === 'feed' && !isMenuOpen) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      scrollToTop();
     } else {
       goToTab('feed');
     }
@@ -184,14 +203,14 @@ export default function App() {
 
   function handleHeaderClick() {
     if (tab === 'feed') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      scrollToTop();
     } else {
       goToTab('feed');
-      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
+      setTimeout(() => scrollToTop(), 100);
     }
   }
 
-  // ESTILOS DA NAVBAR
+  // ESTILOS DA NAVBAR - 5 Botões (20% de largura cada)
   const navItemStyle = (isActive) => ({
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', 
     padding: '8px 0', width: '20%',
