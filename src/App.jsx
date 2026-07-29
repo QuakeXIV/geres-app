@@ -13,10 +13,9 @@ import Estatisticas from './components/Estatisticas';
 import Compras from './components/Compras';
 import Arena from './components/Arena';
 import TutorialInstalacao from './components/TutorialInstalacao';
-// ⚠️ Apagámos o PermissaoNotificacoes daqui!
 
 // Ícones
-import { Home, Beer, Target, LogOut, Sun, Moon, BookOpen, BarChart3, ShoppingCart, Camera, Gamepad2, Bell, BellOff, User, Save } from 'lucide-react';
+import { Home, Beer, Target, LogOut, Sun, Moon, BookOpen, BarChart3, ShoppingCart, Camera, Gamepad2, Bell, BellOff, User, Save, MapPin } from 'lucide-react';
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -64,7 +63,7 @@ export default function App() {
     }
   }
 
-  // ⚠️ INICIAR ONESIGNAL SEM CONFLITOS
+  // INICIAR ONESIGNAL
   useEffect(() => {
     if (!session?.user?.id || oneSignalInitRef.current) return;
     oneSignalInitRef.current = true; 
@@ -77,10 +76,8 @@ export default function App() {
           notifyButton: { enable: false }, 
         });
         
-        // Regista o utilizador e a Tag
         if (OneSignal.login) await OneSignal.login(session.user.id);
         
-        // Verifica o estado (Código compatível com todas as versões do OneSignal)
         if (OneSignal.User && OneSignal.User.PushSubscription) {
           OneSignal.User.addTag("app_user_id", session.user.id);
           setPushEnabled(OneSignal.User.PushSubscription.optedIn);
@@ -98,7 +95,7 @@ export default function App() {
 
   if (!session) return <Auth />;
 
-  // --- FUNÇÕES DO MENU/PERFIL ---
+  // --- FUNÇÕES DO PERFIL ---
   async function atualizarFoto(event) {
     try {
       setUploadingProfile(true);
@@ -137,10 +134,8 @@ export default function App() {
     document.body.setAttribute('data-theme', novoTema);
   }
 
-  // BOTÃO DE LIGAR/DESLIGAR À PROVA DE BALA
   const toggleNotificacoes = async () => {
     try {
-      // VERSÃO NOVA DO ONESIGNAL
       if (OneSignal.User && OneSignal.User.PushSubscription) {
         if (pushEnabled) {
           await OneSignal.User.PushSubscription.optOut();
@@ -152,36 +147,29 @@ export default function App() {
           setPushEnabled(true); 
           showToast("Notificações ativadas 🔔", "success");
         }
-      } 
-      // VERSÃO ANTIGA DO ONESIGNAL (Caso o NPM tenha instalado uma mais antiga)
-      else if (OneSignal.isPushNotificationsEnabled) {
+      } else if (OneSignal.isPushNotificationsEnabled) {
         if (pushEnabled) {
           await OneSignal.setSubscription(false);
           setPushEnabled(false);
-          showToast("Notificações desativadas 🔕", "error");
         } else {
           await OneSignal.showSlidedownPrompt();
           await OneSignal.setSubscription(true);
           setPushEnabled(true);
-          showToast("Notificações ativadas 🔔", "success");
         }
       }
     } catch (error) { 
       console.error("Erro notificações:", error);
-      showToast("Tenta atualizar a página primeiro.", "error");
     }
   };
 
-  // ESTILOS DA NAVBAR SCROLLÁVEL
+  // NOVO ESTILO DA NAVBAR (Design tipo Dock do iOS)
   const navItemStyle = (isActive) => ({
-    display: 'flex', alignItems: 'center', gap: '8px', 
-    padding: '10px 16px', borderRadius: '30px', 
-    background: isActive ? 'var(--accent)' : 'transparent',
-    color: isActive ? 'white' : 'var(--text-dim)', 
-    border: isActive ? 'none' : '1px solid var(--border)', 
-    cursor: 'pointer', whiteSpace: 'nowrap',
-    transition: 'all 0.2s', fontWeight: 'bold', fontSize: '14px',
-    boxShadow: isActive ? '0 4px 10px rgba(249, 115, 22, 0.3)' : 'none'
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', 
+    padding: '8px 14px', borderRadius: '16px', 
+    background: isActive ? 'rgba(249, 115, 22, 0.15)' : 'transparent',
+    color: isActive ? 'var(--accent)' : 'var(--text-dim)', 
+    border: 'none', cursor: 'pointer', minWidth: '70px',
+    transition: 'all 0.3s ease',
   });
 
   return (
@@ -193,38 +181,57 @@ export default function App() {
 
       {toast.show && (
         <div style={{
-          position: 'fixed', top: 'calc(60px + env(safe-area-inset-top))', left: '50%', transform: 'translateX(-50%)',
+          position: 'fixed', top: 'calc(70px + env(safe-area-inset-top))', left: '50%', transform: 'translateX(-50%)',
           zIndex: 9999, width: '90%', maxWidth: '400px',
           background: toast.type === 'error' ? '#ef4444' : 'var(--success)',
           color: 'white', padding: '12px 20px', borderRadius: '12px',
-          textAlign: 'center', fontWeight: 'bold', boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+          textAlign: 'center', fontWeight: 'bold', boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+          animation: 'slideDown 0.3s ease-out'
         }}>
           {toast.message}
         </div>
       )}
 
-      {/* HEADER */}
+      {/* HEADER REDESIGN TOTAL */}
       <div style={{ 
         display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
         paddingTop: 'calc(15px + env(safe-area-inset-top))', paddingBottom: '15px',
         paddingLeft: '20px', paddingRight: '20px', 
-        background: 'var(--bg-card)', backdropFilter: 'blur(10px)',
+        background: 'var(--bg-card)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)',
         borderBottom: '1px solid var(--border)', position: 'sticky',
-        top: 0, zIndex: 100, boxShadow: '0 4px 15px rgba(0,0,0,0.05)'
+        top: 0, zIndex: 100, boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
       }}>
-        <h3 style={{ margin: 0, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Sun size={20} /> Gerês 2k26
-        </h3>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <div style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid var(--accent)', overflow: 'hidden', background: 'var(--bg-main)' }}>
-            {avatarUrl ? <img src={avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <User size={16} color="var(--text-dim)" style={{ margin: '6px' }} />}
+        {/* Esquerda: Ícone do Sol */}
+        <div style={{ width: '40px', display: 'flex', alignItems: 'center' }}>
+          <Sun size={24} color="var(--accent)" />
+        </div>
+
+        {/* Meio: Título com Gradiente */}
+        <div style={{ flex: 1, textAlign: 'center' }}>
+          <h2 style={{ 
+            margin: 0, fontSize: '20px', fontWeight: '900', letterSpacing: '0.5px',
+            background: 'linear-gradient(135deg, #f97316 0%, #f43f5e 100%)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
+          }}>
+            GERÊS 2K26
+          </h2>
+        </div>
+        
+        {/* Direita: Avatar de Perfil (Clicável) */}
+        <div style={{ width: '40px', display: 'flex', justifyContent: 'flex-end' }}>
+          <div 
+            onClick={() => setTab('menu')}
+            style={{ width: '36px', height: '36px', borderRadius: '50%', border: tab === 'menu' ? '2px solid var(--accent)' : '2px solid var(--border)', overflow: 'hidden', background: 'var(--bg-main)', cursor: 'pointer', transition: 'border 0.3s' }}
+          >
+            {avatarUrl ? <img src={avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <User size={20} color="var(--text-dim)" style={{ margin: '6px' }} />}
           </div>
         </div>
+
       </div>
 
       {/* CONTEÚDO DAS ABAS */}
-      <div style={{ paddingBottom: '90px' }}>
+      <div style={{ paddingBottom: '100px' }}>
         {tab === 'feed' && <Feed session={session} />}
         {tab === 'tasca' && <Tasca session={session} />}
         {tab === 'missoes' && <Missoes session={session} />}
@@ -234,7 +241,7 @@ export default function App() {
         {tab === 'camera' && <DisposableCamera session={session} />}
         {tab === 'arena' && <Arena session={session} />}
         
-        {/* O NOVO MENU (PERFIL E DEFINIÇÕES) */}
+        {/* MENU (PERFIL E DEFINIÇÕES) */}
         {tab === 'menu' && (
           <div style={{ padding: '15px' }}>
             
@@ -267,12 +274,7 @@ export default function App() {
             </h3>
 
             <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
-              
-              {/* TOGGLE MODO ESCURO */}
-              <div 
-                onClick={toggleTheme}
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
-              >
+              <div onClick={toggleTheme} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{ background: isDarkMode ? '#334155' : '#fef08a', padding: '10px', borderRadius: '10px' }}>
                     {isDarkMode ? <Moon size={20} color="#94a3b8" /> : <Sun size={20} color="#eab308" />}
@@ -284,11 +286,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* TOGGLE NOTIFICAÇÕES */}
-              <div 
-                onClick={toggleNotificacoes}
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px', cursor: 'pointer' }}
-              >
+              <div onClick={toggleNotificacoes} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px', cursor: 'pointer' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{ background: pushEnabled ? '#dcfce7' : '#fee2e2', padding: '10px', borderRadius: '10px' }}>
                     {pushEnabled ? <Bell size={20} color="#16a34a" /> : <BellOff size={20} color="#dc2626" />}
@@ -302,10 +300,8 @@ export default function App() {
                   <div style={{ width: '22px', height: '22px', background: 'white', borderRadius: '50%', position: 'absolute', top: '3px', left: pushEnabled ? '25px' : '3px', transition: 'left 0.3s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
                 </div>
               </div>
-
             </div>
 
-            {/* LOGOUT */}
             <button onClick={() => supabase.auth.signOut()} style={{ background: '#fee2e2', color: '#ef4444', border: 'none', width: '100%', padding: '16px', borderRadius: '12px', fontWeight: 'bold', fontSize: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginTop: '30px', cursor: 'pointer' }}>
               <LogOut size={20} /> Terminar Sessão
             </button>
@@ -314,59 +310,63 @@ export default function App() {
         )}
       </div>
 
-      {/* NAVBAR HORIZONTAL SCROLLÁVEL */}
+      {/* A NOVA NAVBAR HORIZONTAL - TIPO DOCK MODERNO */}
       <div style={{
-        position: 'fixed', bottom: 0, left: 0, width: '100%', 
-        background: 'var(--bg-card)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)',
-        borderTop: '1px solid var(--border)', zIndex: 1000,
-        paddingBottom: 'env(safe-area-inset-bottom)'
+        position: 'fixed', bottom: 'max(15px, env(safe-area-inset-bottom))', left: '50%', transform: 'translateX(-50%)',
+        width: '95%', maxWidth: '450px', background: 'var(--bg-card)', 
+        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+        borderRadius: '25px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+        border: '1px solid var(--border)', zIndex: 1000, overflow: 'hidden'
       }}>
         <div className="scroll-navbar" style={{
-          display: 'flex', overflowX: 'auto', gap: '10px', padding: '15px 20px', 
+          display: 'flex', overflowX: 'auto', gap: '5px', padding: '10px 15px', 
           WebkitOverflowScrolling: 'touch', alignItems: 'center'
         }}>
           
           <button style={navItemStyle(tab === 'feed')} onClick={() => setTab('feed')}>
-            <Home size={18} /> Feed
+            <Home size={22} />
+            <span style={{ fontSize: '10px' }}>Feed</span>
           </button>
           
           <button style={navItemStyle(tab === 'tasca')} onClick={() => setTab('tasca')}>
-            <Beer size={18} /> Tasca
+            <Beer size={22} />
+            <span style={{ fontSize: '10px' }}>Tasca</span>
           </button>
           
           <button style={navItemStyle(tab === 'missoes')} onClick={() => setTab('missoes')}>
-            <Target size={18} /> Missões
+            <Target size={22} />
+            <span style={{ fontSize: '10px' }}>Missões</span>
           </button>
 
           <button style={navItemStyle(tab === 'arena')} onClick={() => setTab('arena')}>
-            <Gamepad2 size={18} /> Arena
+            <Gamepad2 size={22} />
+            <span style={{ fontSize: '10px' }}>Arena</span>
           </button>
 
           <button style={navItemStyle(tab === 'compras')} onClick={() => setTab('compras')}>
-            <ShoppingCart size={18} /> Radar
+            <ShoppingCart size={22} />
+            <span style={{ fontSize: '10px' }}>Radar</span>
           </button>
 
           <button style={navItemStyle(tab === 'livro')} onClick={() => setTab('livro')}>
-            <BookOpen size={18} /> Livro
+            <BookOpen size={22} />
+            <span style={{ fontSize: '10px' }}>Livro</span>
           </button>
 
           <button style={navItemStyle(tab === 'camera')} onClick={() => setTab('camera')}>
-            <Camera size={18} /> Câmara
+            <Camera size={22} />
+            <span style={{ fontSize: '10px' }}>Câmara</span>
           </button>
 
           <button style={navItemStyle(tab === 'stats')} onClick={() => setTab('stats')}>
-            <BarChart3 size={18} /> Stats
-          </button>
-
-          <button style={navItemStyle(tab === 'menu')} onClick={() => setTab('menu')}>
-            <User size={18} /> Perfil
+            <BarChart3 size={22} />
+            <span style={{ fontSize: '10px' }}>Stats</span>
           </button>
 
         </div>
       </div>
 
       <TutorialInstalacao />
-      {/* Removemos o PermissaoNotificacoes permanentemente */}
     </div>
   );
 }
