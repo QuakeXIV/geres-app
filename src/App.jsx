@@ -13,7 +13,7 @@ import Estatisticas from './components/Estatisticas';
 import Compras from './components/Compras';
 import Arena from './components/Arena';
 import TutorialInstalacao from './components/TutorialInstalacao';
-import PermissaoNotificacoes from './components/PermissaoNotificacoes';
+// ⚠️ Apagámos o PermissaoNotificacoes daqui!
 
 // Ícones
 import { Home, Beer, Target, LogOut, Sun, Moon, BookOpen, BarChart3, ShoppingCart, Camera, Gamepad2, Bell, BellOff, User, Save } from 'lucide-react';
@@ -64,9 +64,8 @@ export default function App() {
     }
   }
 
-  // ⚠️ A GRANDE CORREÇÃO DAS NOTIFICAÇÕES (Fim das falhas)
+  // ⚠️ INICIAR ONESIGNAL SEM CONFLITOS
   useEffect(() => {
-    // Só iniciamos quando a sessão existe para garantir que a Tag vai certa!
     if (!session?.user?.id || oneSignalInitRef.current) return;
     oneSignalInitRef.current = true; 
 
@@ -78,22 +77,24 @@ export default function App() {
           notifyButton: { enable: false }, 
         });
         
-        // 1. Diz ao OneSignal quem é que acabou de abrir a app
-        await OneSignal.login(session.user.id);
+        // Regista o utilizador e a Tag
+        if (OneSignal.login) await OneSignal.login(session.user.id);
         
-        // 2. Só DEPOIS de iniciado é que aplicamos a Tag
-        if (OneSignal.User) {
+        // Verifica o estado (Código compatível com todas as versões do OneSignal)
+        if (OneSignal.User && OneSignal.User.PushSubscription) {
           OneSignal.User.addTag("app_user_id", session.user.id);
           setPushEnabled(OneSignal.User.PushSubscription.optedIn);
-        } else {
+        } else if (OneSignal.isPushNotificationsEnabled) {
           OneSignal.sendTag("app_user_id", session.user.id);
+          const isEnabled = await OneSignal.isPushNotificationsEnabled();
+          setPushEnabled(isEnabled);
         }
       } catch (error) { 
         console.error("Erro crítico no OneSignal:", error); 
       }
     }
     setupOneSignal();
-  }, [session]); // 👈 Agora o efeito depende da sessão. Se não houver sessão, não há confusão de Tags!
+  }, [session]);
 
   if (!session) return <Auth />;
 
@@ -136,8 +137,10 @@ export default function App() {
     document.body.setAttribute('data-theme', novoTema);
   }
 
+  // BOTÃO DE LIGAR/DESLIGAR À PROVA DE BALA
   const toggleNotificacoes = async () => {
     try {
+      // VERSÃO NOVA DO ONESIGNAL
       if (OneSignal.User && OneSignal.User.PushSubscription) {
         if (pushEnabled) {
           await OneSignal.User.PushSubscription.optOut();
@@ -149,8 +152,24 @@ export default function App() {
           setPushEnabled(true); 
           showToast("Notificações ativadas 🔔", "success");
         }
+      } 
+      // VERSÃO ANTIGA DO ONESIGNAL (Caso o NPM tenha instalado uma mais antiga)
+      else if (OneSignal.isPushNotificationsEnabled) {
+        if (pushEnabled) {
+          await OneSignal.setSubscription(false);
+          setPushEnabled(false);
+          showToast("Notificações desativadas 🔕", "error");
+        } else {
+          await OneSignal.showSlidedownPrompt();
+          await OneSignal.setSubscription(true);
+          setPushEnabled(true);
+          showToast("Notificações ativadas 🔔", "success");
+        }
       }
-    } catch (error) { console.error("Erro notificações:", error); }
+    } catch (error) { 
+      console.error("Erro notificações:", error);
+      showToast("Tenta atualizar a página primeiro.", "error");
+    }
   };
 
   // ESTILOS DA NAVBAR SCROLLÁVEL
@@ -167,13 +186,11 @@ export default function App() {
 
   return (
     <div>
-      {/* INJETAR CSS PARA ESCONDER A BARRA DE SCROLL DA NAVBAR INFERIOR */}
       <style>{`
         .scroll-navbar::-webkit-scrollbar { display: none; }
         .scroll-navbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {/* TOAST CUSTOMIZADO */}
       {toast.show && (
         <div style={{
           position: 'fixed', top: 'calc(60px + env(safe-area-inset-top))', left: '50%', transform: 'translateX(-50%)',
@@ -267,7 +284,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* TOGGLE NOTIFICAÇÕES - AGORA A ROW TODA É CLICÁVEL */}
+              {/* TOGGLE NOTIFICAÇÕES */}
               <div 
                 onClick={toggleNotificacoes}
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px', cursor: 'pointer' }}
@@ -297,7 +314,7 @@ export default function App() {
         )}
       </div>
 
-      {/* A TUA NOVA NAVBAR HORIZONTAL SCROLLÁVEL */}
+      {/* NAVBAR HORIZONTAL SCROLLÁVEL */}
       <div style={{
         position: 'fixed', bottom: 0, left: 0, width: '100%', 
         background: 'var(--bg-card)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)',
@@ -349,7 +366,7 @@ export default function App() {
       </div>
 
       <TutorialInstalacao />
-      <PermissaoNotificacoes />
+      {/* Removemos o PermissaoNotificacoes permanentemente */}
     </div>
   );
 }
