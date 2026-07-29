@@ -34,11 +34,10 @@ export default function Compras({ session }) {
 
   async function carregarLista() {
     setIsRefreshing(true);
-    // 1. Puxar apenas a lista de compras
     const { data: listData, error } = await supabase
       .from('shopping_list')
       .select('*')
-      .order('is_bought', { ascending: true }) // Os não comprados ficam em cima
+      .order('is_bought', { ascending: true }) 
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -47,10 +46,8 @@ export default function Compras({ session }) {
       return;
     }
 
-    // 2. Puxar os perfis à parte
     const { data: profilesData } = await supabase.from('profiles').select('id, username');
 
-    // 3. Cruzar os dados à mão
     const itemsComPerfis = (listData || []).map(item => {
       const perfil = (profilesData || []).find(p => p.id === item.user_id);
       return {
@@ -117,7 +114,7 @@ export default function Compras({ session }) {
 
       {/* BOTÃO DE REFRESH MANUAL NO TOPO */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
-        <button onClick={carregarLista} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #e2e8f0', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+        <button onClick={carregarLista} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
           <RefreshCw size={16} /> {isRefreshing ? 'A atualizar...' : 'Atualizar Radar'}
         </button>
       </div>
@@ -146,11 +143,12 @@ export default function Compras({ session }) {
       <div className="card">
         <form onSubmit={adicionarItem} style={{ display: 'flex', gap: '10px' }}>
           <input 
+            className="input-field" 
             type="text" 
             placeholder="Ex: 5 sacos de Gelo..." 
             value={novoItem}
             onChange={(e) => setNovoItem(e.target.value)}
-            style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '15px' }}
+            style={{ flex: 1, margin: 0 }}
             required
           />
           <button 
@@ -165,7 +163,7 @@ export default function Compras({ session }) {
 
       {/* LISTA DE ITENS */}
       <div className="card">
-        <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a' }}>
+        <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text)' }}>
           <ShoppingCart size={20} color="#10b981" /> O que falta comprar
         </h3>
         
@@ -178,18 +176,18 @@ export default function Compras({ session }) {
             {items.map((item) => (
               <div key={item.id} style={{ 
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
-                padding: '12px', background: item.is_bought ? '#f8fafc' : 'white', 
-                border: item.is_bought ? '1px solid #e2e8f0' : '2px solid #10b981', 
+                padding: '12px', background: item.is_bought ? 'var(--bg-main)' : 'var(--input-bg)', 
+                border: item.is_bought ? '1px solid var(--border)' : '2px solid #10b981', 
                 borderRadius: '12px', transition: 'all 0.2s' 
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, cursor: 'pointer' }} onClick={() => toggleComprado(item.id, item.is_bought)}>
                   {item.is_bought ? (
-                    <CheckCircle2 size={24} color="#94a3b8" />
+                    <CheckCircle2 size={24} color="var(--text-dim)" />
                   ) : (
                     <Circle size={24} color="#10b981" />
                   )}
                   <div>
-                    <p style={{ margin: 0, fontSize: '16px', fontWeight: item.is_bought ? 'normal' : 'bold', color: item.is_bought ? '#94a3b8' : 'var(--text)', textDecoration: item.is_bought ? 'line-through' : 'none' }}>
+                    <p style={{ margin: 0, fontSize: '16px', fontWeight: item.is_bought ? 'normal' : 'bold', color: item.is_bought ? 'var(--text-dim)' : 'var(--text)', textDecoration: item.is_bought ? 'line-through' : 'none' }}>
                       {item.item_name}
                     </p>
                     <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'var(--text-dim)' }}>

@@ -200,7 +200,7 @@ export default function Arena({ session }) {
 
       {/* BOTÃO DE REFRESH MANUAL NO TOPO */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
-        <button onClick={carregarDados} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #e2e8f0', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+        <button onClick={carregarDados} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
           <RefreshCw size={16} /> {isRefreshing ? 'A atualizar...' : 'Atualizar Arena'}
         </button>
       </div>
@@ -229,9 +229,9 @@ export default function Arena({ session }) {
             </h3>
             <form onSubmit={criarJogo} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', width: '100%' }}>
-                <input type="text" placeholder="Equipa A" value={team1} onChange={(e) => setTeam1(e.target.value)} style={{ flex: 1, minWidth: 0, padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', boxSizing: 'border-box', textAlign: 'center', fontSize: '15px' }} required />
+                <input className="input-field" type="text" placeholder="Equipa A" value={team1} onChange={(e) => setTeam1(e.target.value)} style={{ flex: 1, minWidth: 0, margin: 0, textAlign: 'center' }} required />
                 <span style={{ fontWeight: '900', color: 'var(--text-dim)', fontSize: '14px' }}>VS</span>
-                <input type="text" placeholder="Equipa B" value={team2} onChange={(e) => setTeam2(e.target.value)} style={{ flex: 1, minWidth: 0, padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', boxSizing: 'border-box', textAlign: 'center', fontSize: '15px' }} required />
+                <input className="input-field" type="text" placeholder="Equipa B" value={team2} onChange={(e) => setTeam2(e.target.value)} style={{ flex: 1, minWidth: 0, margin: 0, textAlign: 'center' }} required />
               </div>
               <button className="btn-primary" disabled={loading} style={{ background: 'var(--accent)', width: '100%', margin: 0 }}>
                 {loading ? 'A preparar...' : 'Começar Jogo'}
@@ -244,11 +244,11 @@ export default function Arena({ session }) {
               <p style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '14px', margin: '20px 0' }}>Nenhum jogo a decorrer.</p>
             ) : (
               games.map((game) => (
-                <div key={game.id} className="card" style={{ padding: '0', overflow: 'hidden', border: game.status === 'live' ? '2px solid var(--accent)' : '1px solid #e2e8f0', opacity: game.status === 'live' ? 1 : 0.6 }}>
-                  <div style={{ background: game.status === 'live' ? '#ffedd5' : '#f8fafc', padding: '10px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
+                <div key={game.id} className="card" style={{ padding: '0', overflow: 'hidden', border: game.status === 'live' ? '2px solid var(--accent)' : '1px solid var(--border)', opacity: game.status === 'live' ? 1 : 0.6 }}>
+                  <div style={{ background: game.status === 'live' ? 'rgba(249, 115, 22, 0.15)' : 'var(--input-bg)', padding: '10px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {game.status === 'live' ? <span style={{ width: '8px', height: '8px', background: '#ef4444', borderRadius: '50%', display: 'inline-block', animation: 'pulse 2s infinite' }}></span> : <Flag size={16} color="#64748b" />}
-                      <span style={{ fontSize: '12px', fontWeight: 'bold', color: game.status === 'live' ? 'var(--accent)' : '#64748b', textTransform: 'uppercase' }}>{game.status === 'live' ? 'Em Direto' : 'Terminado'}</span>
+                      {game.status === 'live' ? <span style={{ width: '8px', height: '8px', background: '#ef4444', borderRadius: '50%', display: 'inline-block', animation: 'pulse 2s infinite' }}></span> : <Flag size={16} color="var(--text-dim)" />}
+                      <span style={{ fontSize: '12px', fontWeight: 'bold', color: game.status === 'live' ? 'var(--accent)' : 'var(--text-dim)', textTransform: 'uppercase' }}>{game.status === 'live' ? 'Em Direto' : 'Terminado'}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       {game.status === 'live' && (
@@ -260,12 +260,12 @@ export default function Arena({ session }) {
                     </div>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'stretch' }}>
-                    <div style={{ flex: 1, padding: '20px', textAlign: 'center', borderRight: '1px solid #e2e8f0' }}>
+                    <div style={{ flex: 1, padding: '20px', textAlign: 'center', borderRight: '1px solid var(--border)' }}>
                       <h4 style={{ margin: '0 0 10px 0', fontSize: '16px', color: 'var(--text)' }}>{game.team1_name}</h4>
                       <div style={{ fontSize: '48px', fontWeight: '900', color: 'var(--text)', lineHeight: '1' }}>{game.score1}</div>
                       {game.status === 'live' && (
                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '15px' }}>
-                          <button onClick={() => atualizarScore(game.id, 1, game.score1, -1)} style={{ background: '#f1f5f9', border: 'none', width: '40px', height: '40px', borderRadius: '10px', cursor: 'pointer' }}><Minus size={20} color="#64748b" /></button>
+                          <button onClick={() => atualizarScore(game.id, 1, game.score1, -1)} style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', width: '40px', height: '40px', borderRadius: '10px', cursor: 'pointer' }}><Minus size={20} color="var(--text-dim)" /></button>
                           <button onClick={() => atualizarScore(game.id, 1, game.score1, 1)} style={{ background: 'var(--accent)', border: 'none', width: '40px', height: '40px', borderRadius: '10px', cursor: 'pointer', color: 'white' }}><Plus size={20} /></button>
                         </div>
                       )}
@@ -275,7 +275,7 @@ export default function Arena({ session }) {
                       <div style={{ fontSize: '48px', fontWeight: '900', color: 'var(--text)', lineHeight: '1' }}>{game.score2}</div>
                       {game.status === 'live' && (
                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '15px' }}>
-                          <button onClick={() => atualizarScore(game.id, 2, game.score2, -1)} style={{ background: '#f1f5f9', border: 'none', width: '40px', height: '40px', borderRadius: '10px', cursor: 'pointer' }}><Minus size={20} color="#64748b" /></button>
+                          <button onClick={() => atualizarScore(game.id, 2, game.score2, -1)} style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', width: '40px', height: '40px', borderRadius: '10px', cursor: 'pointer' }}><Minus size={20} color="var(--text-dim)" /></button>
                           <button onClick={() => atualizarScore(game.id, 2, game.score2, 1)} style={{ background: 'var(--accent)', border: 'none', width: '40px', height: '40px', borderRadius: '10px', cursor: 'pointer', color: 'white' }}><Plus size={20} /></button>
                         </div>
                       )}
@@ -296,8 +296,8 @@ export default function Arena({ session }) {
             </h3>
             <p style={{ fontSize: '12px', color: 'var(--text-dim)', marginBottom: '10px' }}>Coloca o nome dos jogadores/equipas (um por linha). Sorteio é automático.</p>
             <form onSubmit={criarTorneio} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <input type="text" placeholder="Nome do Torneio (ex: Taça de Sueca)" value={tourneyName} onChange={(e) => setTourneyName(e.target.value)} style={{ padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }} required />
-              <textarea placeholder="Diogo&#10;João&#10;Pedro&#10;Zé" rows="4" value={tourneyPlayers} onChange={(e) => setTourneyPlayers(e.target.value)} style={{ padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', resize: 'none' }} required />
+              <input className="input-field" type="text" placeholder="Nome do Torneio (ex: Taça de Sueca)" value={tourneyName} onChange={(e) => setTourneyName(e.target.value)} style={{ margin: 0 }} required />
+              <textarea className="input-field" placeholder="Diogo&#10;João&#10;Pedro&#10;Zé" rows="4" value={tourneyPlayers} onChange={(e) => setTourneyPlayers(e.target.value)} style={{ resize: 'none', margin: 0 }} required />
               <button className="btn-primary" disabled={loading} style={{ background: 'var(--accent)', width: '100%', color: 'white' }}>{loading ? 'A gerar...' : 'Gerar Chave (Sorteio)'}</button>
             </form>
           </div>
@@ -306,8 +306,8 @@ export default function Arena({ session }) {
             {tournaments.map((tourney) => {
               const totalRounds = tourney.rounds.length;
               return (
-                <div key={tourney.id} className="card" style={{ padding: 0, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-                  <div style={{ background: tourney.status === 'active' ? '#ffedd5' : '#f8fafc', padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0' }}>
+                <div key={tourney.id} className="card" style={{ padding: 0, border: '1px solid var(--border)', overflow: 'hidden' }}>
+                  <div style={{ background: tourney.status === 'active' ? 'rgba(249, 115, 22, 0.15)' : 'var(--input-bg)', padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)' }}>
                     <div>
                       <h4 style={{ margin: '0 0 2px 0', fontSize: '18px', color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         {tourney.status === 'finished' && <Crown size={18} color="var(--accent)" />} {tourney.name}
@@ -328,7 +328,7 @@ export default function Arena({ session }) {
 
                       return (
                         <div key={rIdx}>
-                          <h5 style={{ margin: '0 0 10px 0', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-dim)', borderBottom: '1px dashed #cbd5e1', paddingBottom: '4px' }}>
+                          <h5 style={{ margin: '0 0 10px 0', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-dim)', borderBottom: '1px dashed var(--border)', paddingBottom: '4px' }}>
                             {roundName}
                           </h5>
                           
@@ -343,17 +343,17 @@ export default function Arena({ session }) {
                               if (match.p1 === 'BYE' || match.p2 === 'BYE') return null;
 
                               return (
-                                <div key={mIdx} style={{ display: 'flex', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', opacity: match.winner ? 0.7 : 1 }}>
+                                <div key={mIdx} style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', opacity: match.winner ? 0.7 : 1 }}>
                                   <div 
                                     onClick={() => canVote && avancarVencedor(tourney.id, tourney.rounds, rIdx, mIdx, p1)}
-                                    style={{ flex: 1, padding: '10px', textAlign: 'center', background: p1Win ? '#ffedd5' : '#f8fafc', fontWeight: p1Win ? 'bold' : 'normal', color: p1Win ? 'var(--accent)' : 'var(--text)', cursor: canVote ? 'pointer' : 'default', borderRight: '1px solid #e2e8f0', transition: 'background 0.2s' }}
+                                    style={{ flex: 1, padding: '10px', textAlign: 'center', background: p1Win ? 'rgba(249, 115, 22, 0.15)' : 'var(--bg-main)', fontWeight: p1Win ? 'bold' : 'normal', color: p1Win ? 'var(--accent)' : 'var(--text)', cursor: canVote ? 'pointer' : 'default', borderRight: '1px solid var(--border)', transition: 'background 0.2s' }}
                                   >
                                     {p1}
                                   </div>
-                                  <div style={{ background: '#f1f5f9', width: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold', color: 'var(--text-dim)' }}>VS</div>
+                                  <div style={{ background: 'var(--input-bg)', width: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold', color: 'var(--text-dim)' }}>VS</div>
                                   <div 
                                     onClick={() => canVote && avancarVencedor(tourney.id, tourney.rounds, rIdx, mIdx, p2)}
-                                    style={{ flex: 1, padding: '10px', textAlign: 'center', background: p2Win ? '#ffedd5' : '#f8fafc', fontWeight: p2Win ? 'bold' : 'normal', color: p2Win ? 'var(--accent)' : 'var(--text)', cursor: canVote ? 'pointer' : 'default', borderLeft: '1px solid #e2e8f0', transition: 'background 0.2s' }}
+                                    style={{ flex: 1, padding: '10px', textAlign: 'center', background: p2Win ? 'rgba(249, 115, 22, 0.15)' : 'var(--bg-main)', fontWeight: p2Win ? 'bold' : 'normal', color: p2Win ? 'var(--accent)' : 'var(--text)', cursor: canVote ? 'pointer' : 'default', borderLeft: '1px solid var(--border)', transition: 'background 0.2s' }}
                                   >
                                     {p2}
                                   </div>
@@ -366,10 +366,10 @@ export default function Arena({ session }) {
                     })}
 
                     {tourney.status === 'finished' && (
-                      <div style={{ background: '#ffedd5', border: '1px solid var(--accent)', borderRadius: '12px', padding: '15px', textAlign: 'center', marginTop: '10px' }}>
+                      <div style={{ background: 'rgba(249, 115, 22, 0.15)', border: '1px solid var(--accent)', borderRadius: '12px', padding: '15px', textAlign: 'center', marginTop: '10px' }}>
                         <Crown size={30} color="var(--accent)" style={{ margin: '0 auto 5px auto' }} />
-                        <h4 style={{ margin: 0, color: '#9a3412', fontSize: '14px' }}>Grande Vencedor</h4>
-                        <p style={{ margin: '5px 0 0 0', fontSize: '20px', fontWeight: '900', color: 'var(--accent)' }}>{tourney.rounds[totalRounds - 1][0].winner}</p>
+                        <h4 style={{ margin: 0, color: 'var(--accent)', fontSize: '14px' }}>Grande Vencedor</h4>
+                        <p style={{ margin: '5px 0 0 0', fontSize: '20px', fontWeight: '900', color: 'var(--text)' }}>{tourney.rounds[totalRounds - 1][0].winner}</p>
                       </div>
                     )}
                   </div>
@@ -380,14 +380,14 @@ export default function Arena({ session }) {
         </>
       )}
 
-      {/* MODAL CUSTOMIZADO */}
+      {/* MODAL CUSTOMIZADO (Com cores certas) */}
       {confirmModal.show && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', zIndex: 99999, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
           <div className="card" style={{ width: '100%', maxWidth: '320px', textAlign: 'center', margin: 0, padding: '25px 20px', animation: 'scaleIn 0.2s ease-out' }}>
             <h3 style={{ margin: '0 0 10px 0', fontSize: '20px', color: 'var(--text)' }}>{confirmModal.title}</h3>
             <p style={{ color: 'var(--text-dim)', fontSize: '14px', margin: '0 0 20px 0' }}>{confirmModal.message}</p>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-              <button onClick={() => setConfirmModal({ show: false })} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', background: '#f1f5f9', color: 'var(--text)', fontWeight: 'bold', cursor: 'pointer' }}>Cancelar</button>
+              <button onClick={() => setConfirmModal({ show: false })} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)', fontWeight: 'bold', cursor: 'pointer' }}>Cancelar</button>
               <button onClick={confirmModal.onConfirm} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', background: '#ef4444', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}>Confirmar</button>
             </div>
           </div>
