@@ -126,6 +126,24 @@ export default function Tasca({ session }) {
       showToast(`Erro ao gravar: ${error.message}`, 'error');
     } else {
       showToast('Consumo registado com sucesso! 🍻', 'success');
+      
+      // 3. ENVIA A NOTIFICAÇÃO
+      try {
+        const { data: profile } = await supabase.from('profiles').select('username').eq('id', session.user.id).single();
+        await fetch('https://geres-app.vercel.app/api/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'new_drink',
+            actorName: profile?.username || 'Alguém',
+            extraInfo: `${quantidade}x ${selectedDrink}`,
+            actingId: session.user.id
+          })
+        });
+      } catch (err) {
+        console.log("Erro a notificar:", err);
+      }
+
       setSelectedDrink('');
       setQuantidade(1);
       await carregarDadosTasca(); 
@@ -260,12 +278,15 @@ export default function Tasca({ session }) {
                       {drink.quantity}x {drink.drink_name}
                     </p>
                   </div>
-                  <button
-                    onClick={() => apagarConsumo(drink.id)}
-                    style={{ background: '#fee2e2', border: 'none', borderRadius: '8px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <Trash2 size={16} color="#ef4444" />
-                  </button>
+                  
+                  {drink.user_id === session.user.id && (
+                    <button
+                      onClick={() => apagarConsumo(drink.id)}
+                      style={{ background: '#fee2e2', border: 'none', borderRadius: '8px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <Trash2 size={16} color="#ef4444" />
+                    </button>
+                  )}
                 </div>
               ))
             )}

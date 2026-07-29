@@ -42,7 +42,6 @@ export default function Feed({ session }) {
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 4000);
   }
 
-  // A MÁGICA ESTÁ AQUI: Atualiza quando abres a app
   useEffect(() => {
     carregarPosts();
 
@@ -83,7 +82,7 @@ export default function Feed({ session }) {
         
       const actorName = profile?.username || 'Alguém';
 
-      await fetch('/api/notify', {
+      await fetch('https://geres-app.vercel.app/api/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -135,6 +134,22 @@ export default function Feed({ session }) {
       }]);
 
       if (dbError) throw new Error(`Erro BD: ${dbError.message}`);
+
+      // ⚠️ NOVA LÓGICA: AVISA O GRUPO TODO COM O TEU NOME
+      try {
+        const { data: profile } = await supabase.from('profiles').select('username').eq('id', session.user.id).single();
+        await fetch('https://geres-app.vercel.app/api/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'new_post',
+            actorName: profile?.username || 'Alguém',
+            actingId: session.user.id
+          })
+        });
+      } catch (err) {
+        console.log("Erro a notificar:", err);
+      }
 
       showToast('Publicado com sucesso! 🚀', 'success');
       setCaption('');

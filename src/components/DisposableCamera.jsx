@@ -7,7 +7,6 @@ export default function DisposableCamera({ session }) {
   const [uploading, setUploading] = useState(false);
   const [revealedPosts, setRevealedPosts] = useState([]);
 
-  // A MÁGICA ESTÁ AQUI
   useEffect(() => {
     carregarFotosDescartaveis();
 
@@ -62,6 +61,22 @@ export default function DisposableCamera({ session }) {
       is_disposable: true,
       reveal_at: amanhaMeioDia.toISOString()
     }]);
+
+    // ENVIA A NOTIFICAÇÃO 
+    try {
+      const { data: profile } = await supabase.from('profiles').select('username').eq('id', session.user.id).single();
+      await fetch('https://geres-app.vercel.app/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'new_disposable',
+          actorName: profile?.username || 'Alguém',
+          actingId: session.user.id
+        })
+      });
+    } catch (err) {
+      console.log("Erro a notificar:", err);
+    }
 
     setFile(null);
     setUploading(false);

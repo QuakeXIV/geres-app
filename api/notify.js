@@ -24,45 +24,27 @@ export default async function handler(req, res) {
   let title = "";
   let message = "";
   let targetTab = "feed";
-  let actingUserId = null; // quem despoletou a ação
-  let targetUserId = null; // para quem vai a notificação (ex: dono do post)
+  let actingUserId = null; 
+  let targetUserId = null; 
 
-  // 1. LÓGICA DO CRON (Câmara Descartável)
+  // 1. LÓGICA DO CRON (Câmara Descartável às 12:00)
   if (req.query.tipo === 'camara') {
     title = "As fotos foram reveladas! 📸";
     message = "Corre para a Câmara Descartável para ver as figuras de ontem à noite!";
     targetTab = "camera";
   } 
   
-  // 2. LÓGICA DO SUPABASE (Posts, Livro - Missões removidas daqui!)
-  else if (req.body && req.body.table) {
-    const payload = req.body;
-    const record = payload.record || {};
-
-    actingUserId = record.user_id || record.author_id || record.created_by || null;
-
-    if (payload.table === 'posts' && payload.type === 'INSERT') {
-      title = "Temos conteúdo novo! 🍺";
-      message = "Alguém acabou de publicar no feed, vai cuscar!";
-      targetTab = "feed";
-    } 
-    else if (payload.table === 'tasca_quotes' && payload.type === 'INSERT') {
-      title = "Nova pérola no Livro! 📖";
-      message = "Mais uma frase mítica para a história do Gerês.";
-      targetTab = "livro";
-    } 
-    else {
-      return res.status(200).json({ message: 'Ação ignorada (não precisa de notificação)' });
-    }
-  } 
-
-  // 3. LÓGICA DO FRONTEND (Likes, Comentários e VOTOS NAS MISSÕES)
+  // 2. LÓGICA DIRETA DA APP (FRONTEND) COM NOMES REAIS
   else if (req.body && req.body.action) {
-    const { action, actorName, targetId, actingId, votosFaltam } = req.body;
+    const { action, actorName, targetId, actingId, votosFaltam, extraInfo } = req.body;
     actingUserId = actingId;
     targetUserId = targetId;
 
-    if (action === 'like') {
+    if (action === 'new_post') {
+      title = "Temos conteúdo novo! 🍺";
+      message = `${actorName} acabou de publicar no feed, vai cuscar!`;
+      targetTab = "feed";
+    } else if (action === 'like') {
       title = "Novo Like! ❤️";
       message = `${actorName} curtiu a tua publicação!`;
       targetTab = "feed";
@@ -79,10 +61,27 @@ export default async function handler(req, res) {
         title = "Novo Voto no Tribunal ⚖️";
         message = `${actorName} aprovou a tua missão. Faltam ${votosFaltam} votos!`;
       }
+    } else if (action === 'new_quote') {
+      title = "Nova pérola no Livro! 📖";
+      message = `${actorName} eternizou uma barbaridade dita por ${extraInfo}!`;
+      targetTab = "livro";
+    } else if (action === 'new_drink') {
+      title = "Mais uma para a conta! 🍻";
+      message = `${actorName} acabou de registar ${extraInfo} na Tasca.`;
+      targetTab = "tasca";
+    } else if (action === 'new_disposable') {
+      title = "Click! 📸";
+      message = `${actorName} acabou de tirar uma foto descartável! Prepara a vingança.`;
+      targetTab = "camera";
     } else {
       return res.status(200).json({ message: 'Ação ignorada' });
     }
-  }
+  } 
+  
+  // 3. SEGURANÇA: Se o Supabase ainda tentar enviar gatilhos antigos, ignoramos pacificamente.
+  else if (req.body && req.body.table) {
+    return res.status(200).json({ message: 'Aviso antigo do Supabase ignorado. Frontend assume o controlo.' });
+  } 
   
   else {
     return res.status(400).json({ error: 'Pedido inválido' });
@@ -101,15 +100,13 @@ export default async function handler(req, res) {
       bodyPayload.filters = [
         { field: "tag", key: "app_user_id", relation: "=", value: String(targetUserId) }
       ];
-    } 
-    else if (actingUserId) {
+    } else if (actingUserId) {
       bodyPayload.filters = [
         { field: "tag", key: "app_user_id", relation: "!=", value: String(actingUserId) },
         { operator: "OR" },
         { field: "tag", key: "app_user_id", relation: "not_exists" }
       ];
-    } 
-    else {
+    } else {
       bodyPayload.included_segments = ["All"];
     }
 

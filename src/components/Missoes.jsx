@@ -8,7 +8,6 @@ export default function Missoes({ session }) {
   const [indicesHoje, setIndicesHoje] = useState([]);
   const [todayStr, setTodayStr] = useState('');
   
-  // Dados do servidor
   const [myRequests, setMyRequests] = useState([]);
   const [tribunalRequests, setTribunalRequests] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
@@ -152,7 +151,6 @@ export default function Missoes({ session }) {
     setLoadingAction(null);
   }
 
-  // A LÓGICA QUE NOTIFICA DIRETAMENTE O DONO COM OS VOTOS
   async function aprovarDesafio(request) {
     setLoadingAction(`aprovar-${request.id}`);
 
@@ -168,7 +166,6 @@ export default function Missoes({ session }) {
       return;
     }
 
-    // Calcula os votos faltantes
     const novosVotos = request.approvalCount + 1;
     const faltam = 3 - novosVotos;
 
@@ -180,17 +177,15 @@ export default function Missoes({ session }) {
       showToast(`Aprovado! Faltam ${faltam} votos. 👍`, 'success');
     }
 
-    // 3. ENVIA A NOTIFICAÇÃO PARA QUEM PEDIU A MISSÃO
+    // 3. ENVIA A NOTIFICAÇÃO
     try {
       const { data: profile } = await supabase.from('profiles').select('username').eq('id', session.user.id).single();
-      const approverName = profile?.username || 'Alguém';
-
       await fetch('https://geres-app.vercel.app/api/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'mission_approval',
-          actorName: approverName,
+          actorName: profile?.username || 'Alguém',
           targetId: request.user_id, // Vai apenas para o dono do desafio
           actingId: session.user.id,
           votosFaltam: faltam < 0 ? 0 : faltam
