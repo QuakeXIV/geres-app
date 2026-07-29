@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Target, Trophy, CheckCircle, Circle, ShieldAlert, Zap, Gavel, ThumbsUp, Clock, RefreshCw } from 'lucide-react';
+import { Target, Trophy, CheckCircle, Circle, ShieldAlert, Zap, Gavel, ThumbsUp, Clock } from 'lucide-react';
 
 export default function Missoes({ session }) {
   const [subTab, setSubTab] = useState('diarios');
@@ -8,12 +8,12 @@ export default function Missoes({ session }) {
   const [indicesHoje, setIndicesHoje] = useState([]);
   const [todayStr, setTodayStr] = useState('');
   
+  // Dados do servidor
   const [myRequests, setMyRequests] = useState([]);
   const [tribunalRequests, setTribunalRequests] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   
   const [loadingAction, setLoadingAction] = useState(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   function showToast(message, type = 'success') {
@@ -94,8 +94,7 @@ export default function Missoes({ session }) {
     };
   }, []);
 
-  async function carregarDados(dataHoje = todayStr) {
-    setIsRefreshing(true);
+  async function carregarDados(dataHoje) {
     const { data: reqsData } = await supabase.from('challenge_requests').select('*');
     const { data: appsData } = await supabase.from('challenge_approvals').select('*');
     const { data: profsData } = await supabase.from('profiles').select('id, username');
@@ -128,7 +127,6 @@ export default function Missoes({ session }) {
       .sort((a, b) => b.total - a.total);
 
     setLeaderboard(rankingArray);
-    setIsRefreshing(false);
   }
 
   async function pedirAprovacao(localIndex) {
@@ -151,9 +149,11 @@ export default function Missoes({ session }) {
     setLoadingAction(null);
   }
 
+  // A LÓGICA QUE NOTIFICA DIRETAMENTE O DONO COM OS VOTOS
   async function aprovarDesafio(request) {
     setLoadingAction(`aprovar-${request.id}`);
 
+    // 1. Regista o teu voto
     const { error: insertError } = await supabase.from('challenge_approvals').insert([{
       request_id: request.id,
       approver_id: session.user.id
@@ -165,11 +165,36 @@ export default function Missoes({ session }) {
       return;
     }
 
-    if (request.approvalCount + 1 >= 3) {
+    // Calcula os votos faltantes
+    const novosVotos = request.approvalCount + 1;
+    const faltam = 3 - novosVotos;
+
+    // 2. Se com o teu voto chegou a 3, muda o status para completed!
+    if (novosVotos >= 3) {
       await supabase.from('challenge_requests').update({ status: 'completed' }).eq('id', request.id);
       showToast('Aprovado! Essa pessoa acabou de ganhar 1 ponto! 🎯', 'success');
     } else {
-      showToast(`Aprovado! Faltam ${3 - (request.approvalCount + 1)} votos. 👍`, 'success');
+      showToast(`Aprovado! Faltam ${faltam} votos. 👍`, 'success');
+    }
+
+    // 3. ENVIA A NOTIFICAÇÃO PARA QUEM PEDIU A MISSÃO
+    try {
+      const { data: profile } = await supabase.from('profiles').select('username').eq('id', session.user.id).single();
+      const approverName = profile?.username || 'Alguém';
+
+      await fetch('https://geres-app.vercel.app/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'mission_approval',
+          actorName: approverName,
+          targetId: request.user_id, // Vai apenas para o dono do desafio
+          actingId: session.user.id,
+          votosFaltam: faltam < 0 ? 0 : faltam
+        })
+      });
+    } catch (err) {
+      console.log("Erro a notificar:", err);
     }
 
     await carregarDados(todayStr);
@@ -184,13 +209,6 @@ export default function Missoes({ session }) {
           {toast.message}
         </div>
       )}
-
-      {/* BOTÃO DE REFRESH MANUAL NO TOPO */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
-        <button onClick={() => carregarDados(todayStr)} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #e2e8f0', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
-          <RefreshCw size={16} /> {isRefreshing ? 'A atualizar...' : 'Atualizar Missões'}
-        </button>
-      </div>
 
       {/* CABEÇALHO */}
       <div className="card" style={{ textAlign: 'center', background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', color: 'white' }}>

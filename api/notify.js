@@ -34,43 +34,31 @@ export default async function handler(req, res) {
     targetTab = "camera";
   } 
   
-  // 2. LÓGICA DO SUPABASE (Posts, Tribunal, Livro)
+  // 2. LÓGICA DO SUPABASE (Posts, Livro - Missões removidas daqui!)
   else if (req.body && req.body.table) {
     const payload = req.body;
     const record = payload.record || {};
 
-    // Captura o ID de quem executou a ação
     actingUserId = record.user_id || record.author_id || record.created_by || null;
 
-    // Novo Post no Feed
     if (payload.table === 'posts' && payload.type === 'INSERT') {
       title = "Temos conteúdo novo! 🍺";
       message = "Alguém acabou de publicar no feed, vai cuscar!";
       targetTab = "feed";
     } 
-    
-    // Tribunal (Missão Aprovada)
-    else if (payload.table === 'challenge_approvals' && (payload.type === 'INSERT' || payload.type === 'UPDATE')) {
-      title = "Missão Aprovada! ⚖️";
-      message = "O Tribunal falou! Alguém vai ter de beber...";
-      targetTab = "missoes";
-    } 
-
-    // O Livro (Nova Citação)
     else if (payload.table === 'tasca_quotes' && payload.type === 'INSERT') {
       title = "Nova pérola no Livro! 📖";
       message = "Mais uma frase mítica para a história do Gerês.";
       targetTab = "livro";
     } 
-    
     else {
       return res.status(200).json({ message: 'Ação ignorada (não precisa de notificação)' });
     }
   } 
 
-  // 3. LÓGICA DO FRONTEND (Likes e Comentários)
+  // 3. LÓGICA DO FRONTEND (Likes, Comentários e VOTOS NAS MISSÕES)
   else if (req.body && req.body.action) {
-    const { action, actorName, targetId, actingId } = req.body;
+    const { action, actorName, targetId, actingId, votosFaltam } = req.body;
     actingUserId = actingId;
     targetUserId = targetId;
 
@@ -82,6 +70,15 @@ export default async function handler(req, res) {
       title = "Novo Comentário! 💬";
       message = `${actorName} comentou a tua publicação!`;
       targetTab = "feed";
+    } else if (action === 'mission_approval') {
+      targetTab = "missoes";
+      if (votosFaltam === 0) {
+        title = "Missão Concluída! ✅";
+        message = `${actorName} deu o último voto. Missão aprovada e 1 ponto para ti!`;
+      } else {
+        title = "Novo Voto no Tribunal ⚖️";
+        message = `${actorName} aprovou a tua missão. Faltam ${votosFaltam} votos!`;
+      }
     } else {
       return res.status(200).json({ message: 'Ação ignorada' });
     }
@@ -100,13 +97,11 @@ export default async function handler(req, res) {
       url: `https://geres-app.vercel.app/?tab=${targetTab}`
     };
 
-    // Se tivermos um alvo específico (dono do post), enviamos SÓ PARA ELE
     if (targetUserId) {
       bodyPayload.filters = [
         { field: "tag", key: "app_user_id", relation: "=", value: String(targetUserId) }
       ];
     } 
-    // Se não, e se houver um autor, filtramos para enviar a todos EXCETO a ele
     else if (actingUserId) {
       bodyPayload.filters = [
         { field: "tag", key: "app_user_id", relation: "!=", value: String(actingUserId) },
@@ -114,7 +109,6 @@ export default async function handler(req, res) {
         { field: "tag", key: "app_user_id", relation: "not_exists" }
       ];
     } 
-    // Se for global sem autor (ex: cron da câmara)
     else {
       bodyPayload.included_segments = ["All"];
     }
