@@ -165,16 +165,33 @@ export default function App() {
     }
   };
 
-  // Função para mudar de tab a partir da gaveta e fechá-la logo a seguir
   function goToTab(tabName) {
     setTab(tabName);
     setIsMenuOpen(false);
   }
 
-  // ESTILOS DA NAVBAR 
+  // --- LÓGICA DE SCROLL (INSTAGRAM STYLE) ---
+  function handleFeedClick() {
+    if (tab === 'feed' && !isMenuOpen) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      goToTab('feed');
+    }
+  }
+
+  function handleHeaderClick() {
+    if (tab === 'feed') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      goToTab('feed');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
+    }
+  }
+
+  // ESTILOS DA NAVBAR - Agora são 5 botões, logo width: 20%
   const navItemStyle = (isActive) => ({
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', 
-    padding: '8px 0', width: '25%',
+    padding: '8px 0', width: '20%',
     color: isActive ? 'var(--accent)' : 'var(--text-dim)', 
     border: 'none', cursor: 'pointer', background: 'transparent',
     transition: 'all 0.3s ease',
@@ -182,7 +199,6 @@ export default function App() {
 
   return (
     <div>
-      {/* KEYFRAMES PARA ANIMAÇÕES NATIVAS */}
       <style>{`
         @keyframes slideUpDrawer {
           from { transform: translateY(100%); }
@@ -220,7 +236,8 @@ export default function App() {
           <Sun size={24} color="var(--accent)" />
         </div>
 
-        <div style={{ flex: 1, textAlign: 'center' }}>
+        {/* CLICAR NO TÍTULO FAZ SCROLL PARA CIMA */}
+        <div style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }} onClick={handleHeaderClick}>
           <h2 style={{ 
             margin: 0, fontSize: '20px', fontWeight: '900', letterSpacing: '0.5px',
             background: 'linear-gradient(135deg, #f97316 0%, #f43f5e 100%)',
@@ -240,8 +257,8 @@ export default function App() {
         </div>
       </div>
 
-      {/* CONTEÚDO DAS ABAS */}
-      <div style={{ paddingBottom: '100px' }}>
+      {/* CONTEÚDO DAS ABAS (Removido o paddingBottom de 100px extra que criava o espaço vazio) */}
+      <div>
         {tab === 'feed' && <Feed session={session} />}
         {tab === 'tasca' && <Tasca session={session} />}
         {tab === 'missoes' && <Missoes session={session} />}
@@ -255,13 +272,11 @@ export default function App() {
       {/* GAVETA MÁGICA (BOTTOM SHEET) */}
       {isMenuOpen && (
         <>
-          {/* Fundo escuro atrás da gaveta */}
           <div 
             onClick={() => setIsMenuOpen(false)}
             style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 998, animation: 'fadeInBackdrop 0.3s ease-out' }}
           />
 
-          {/* A Gaveta em si */}
           <div style={{
             position: 'fixed', bottom: 0, left: 0, width: '100%', maxHeight: '90vh', overflowY: 'auto',
             background: 'var(--bg-card)', borderRadius: '24px 24px 0 0', zIndex: 999, 
@@ -269,7 +284,6 @@ export default function App() {
             paddingBottom: 'calc(20px + env(safe-area-inset-bottom))'
           }}>
             
-            {/* O "Tracinho" do topo (Drag Handle visual) */}
             <div style={{ width: '100%', display: 'flex', justifyContent: 'center', paddingTop: '15px', paddingBottom: '10px' }}>
               <div style={{ width: '40px', height: '5px', background: 'var(--text-dim)', borderRadius: '10px', opacity: 0.3 }} />
             </div>
@@ -304,7 +318,7 @@ export default function App() {
                 </form>
               </div>
 
-              {/* GRELHA DE APPS EXTRA */}
+              {/* GRELHA DE APPS EXTRA (Agora sem a Câmara porque ela desceu para a Navbar) */}
               <h4 style={{ margin: '0 0 15px 0', fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-dim)', fontWeight: '800' }}>Explorar</h4>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', marginBottom: '30px' }}>
@@ -321,11 +335,6 @@ export default function App() {
                 <div onClick={() => goToTab('livro')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                   <div style={{ background: 'rgba(249, 115, 22, 0.1)', padding: '15px', borderRadius: '16px' }}><BookOpen size={24} color="var(--accent)" /></div>
                   <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text)' }}>Livro</span>
-                </div>
-
-                <div onClick={() => goToTab('camera')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                  <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '15px', borderRadius: '16px' }}><Camera size={24} color="#3b82f6" /></div>
-                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text)' }}>Câmara</span>
                 </div>
 
                 <div onClick={() => goToTab('stats')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
@@ -368,7 +377,7 @@ export default function App() {
         </>
       )}
 
-      {/* NAVBAR FIXA E LIMPA (Padrão Nativo) */}
+      {/* NAVBAR FIXA E LIMPA (Agora com 5 Botões) */}
       <div style={{
         position: 'fixed', bottom: 0, left: 0, width: '100%', 
         background: 'var(--bg-card)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)',
@@ -377,7 +386,7 @@ export default function App() {
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 10px' }}>
           
-          <button style={navItemStyle(tab === 'feed' && !isMenuOpen)} onClick={() => goToTab('feed')}>
+          <button style={navItemStyle(tab === 'feed' && !isMenuOpen)} onClick={handleFeedClick}>
             <Home size={24} strokeWidth={tab === 'feed' && !isMenuOpen ? 2.5 : 2} />
             <span style={{ fontSize: '10px', marginTop: '2px', fontWeight: tab === 'feed' && !isMenuOpen ? '800' : '600' }}>Feed</span>
           </button>
@@ -392,7 +401,12 @@ export default function App() {
             <span style={{ fontSize: '10px', marginTop: '2px', fontWeight: tab === 'missoes' && !isMenuOpen ? '800' : '600' }}>Missões</span>
           </button>
 
-          {/* O BOTÃO QUE ABRE A GAVETA */}
+          {/* CÂMARA ADICIONADA À NAVBAR */}
+          <button style={navItemStyle(tab === 'camera' && !isMenuOpen)} onClick={() => goToTab('camera')}>
+            <Camera size={24} strokeWidth={tab === 'camera' && !isMenuOpen ? 2.5 : 2} />
+            <span style={{ fontSize: '10px', marginTop: '2px', fontWeight: tab === 'camera' && !isMenuOpen ? '800' : '600' }}>Câmara</span>
+          </button>
+
           <button style={navItemStyle(isMenuOpen)} onClick={() => setIsMenuOpen(!isMenuOpen)}>
             {isMenuOpen ? <X size={24} strokeWidth={2.5} /> : <Menu size={24} />}
             <span style={{ fontSize: '10px', marginTop: '2px', fontWeight: isMenuOpen ? '800' : '600' }}>Mais</span>
