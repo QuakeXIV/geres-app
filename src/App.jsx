@@ -15,7 +15,7 @@ import Arena from './components/Arena';
 import TutorialInstalacao from './components/TutorialInstalacao';
 
 // Ícones
-import { Home, Beer, Target, LogOut, Sun, Moon, BookOpen, BarChart3, ShoppingCart, Camera, Gamepad2, Bell, BellOff, User, Save, MapPin } from 'lucide-react';
+import { Home, Beer, Target, LogOut, Sun, Moon, BookOpen, BarChart3, ShoppingCart, Camera, Gamepad2, Bell, BellOff, User, Save, Menu, X } from 'lucide-react';
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -23,6 +23,9 @@ export default function App() {
     const params = new URLSearchParams(window.location.search);
     return params.get('tab') || 'feed';
   });
+
+  // ESTADO DA GAVETA MÁGICA
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const oneSignalInitRef = useRef(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
@@ -162,21 +165,33 @@ export default function App() {
     }
   };
 
-  // NOVO ESTILO DA NAVBAR (Design tipo Dock do iOS)
+  // Função para mudar de tab a partir da gaveta e fechá-la logo a seguir
+  function goToTab(tabName) {
+    setTab(tabName);
+    setIsMenuOpen(false);
+  }
+
+  // ESTILOS DA NAVBAR 
   const navItemStyle = (isActive) => ({
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', 
-    padding: '8px 14px', borderRadius: '16px', 
-    background: isActive ? 'rgba(249, 115, 22, 0.15)' : 'transparent',
+    padding: '8px 0', width: '25%',
     color: isActive ? 'var(--accent)' : 'var(--text-dim)', 
-    border: 'none', cursor: 'pointer', minWidth: '70px',
+    border: 'none', cursor: 'pointer', background: 'transparent',
     transition: 'all 0.3s ease',
   });
 
   return (
     <div>
+      {/* KEYFRAMES PARA ANIMAÇÕES NATIVAS */}
       <style>{`
-        .scroll-navbar::-webkit-scrollbar { display: none; }
-        .scroll-navbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes slideUpDrawer {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+        @keyframes fadeInBackdrop {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
       `}</style>
 
       {toast.show && (
@@ -192,7 +207,7 @@ export default function App() {
         </div>
       )}
 
-      {/* HEADER REDESIGN TOTAL */}
+      {/* HEADER REDESIGN */}
       <div style={{ 
         display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
         paddingTop: 'calc(15px + env(safe-area-inset-top))', paddingBottom: '15px',
@@ -201,13 +216,10 @@ export default function App() {
         borderBottom: '1px solid var(--border)', position: 'sticky',
         top: 0, zIndex: 100, boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
       }}>
-        
-        {/* Esquerda: Ícone do Sol */}
         <div style={{ width: '40px', display: 'flex', alignItems: 'center' }}>
           <Sun size={24} color="var(--accent)" />
         </div>
 
-        {/* Meio: Título com Gradiente */}
         <div style={{ flex: 1, textAlign: 'center' }}>
           <h2 style={{ 
             margin: 0, fontSize: '20px', fontWeight: '900', letterSpacing: '0.5px',
@@ -218,16 +230,14 @@ export default function App() {
           </h2>
         </div>
         
-        {/* Direita: Avatar de Perfil (Clicável) */}
         <div style={{ width: '40px', display: 'flex', justifyContent: 'flex-end' }}>
           <div 
-            onClick={() => setTab('menu')}
-            style={{ width: '36px', height: '36px', borderRadius: '50%', border: tab === 'menu' ? '2px solid var(--accent)' : '2px solid var(--border)', overflow: 'hidden', background: 'var(--bg-main)', cursor: 'pointer', transition: 'border 0.3s' }}
+            onClick={() => setIsMenuOpen(true)}
+            style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid var(--border)', overflow: 'hidden', background: 'var(--bg-main)', cursor: 'pointer', transition: 'border 0.3s' }}
           >
             {avatarUrl ? <img src={avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <User size={20} color="var(--text-dim)" style={{ margin: '6px' }} />}
           </div>
         </div>
-
       </div>
 
       {/* CONTEÚDO DAS ABAS */}
@@ -240,127 +250,152 @@ export default function App() {
         {tab === 'compras' && <Compras session={session} />}
         {tab === 'camera' && <DisposableCamera session={session} />}
         {tab === 'arena' && <Arena session={session} />}
-        
-        {/* MENU (PERFIL E DEFINIÇÕES) */}
-        {tab === 'menu' && (
-          <div style={{ padding: '15px' }}>
-            
-            <div className="card" style={{ textAlign: 'center', padding: '30px 20px', marginTop: '10px' }}>
-              <div style={{ position: 'relative', width: '110px', height: '110px', margin: '0 auto 20px auto' }}>
-                <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'var(--bg-main)', border: '4px solid var(--accent)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {avatarUrl ? <img src={avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <User size={50} color="var(--text-dim)" />}
-                </div>
-                <label style={{ position: 'absolute', bottom: '0', right: '0', background: 'var(--accent)', color: 'white', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.3)' }}>
-                  <Camera size={18} />
-                  <input type="file" accept="image/*" onChange={atualizarFoto} disabled={uploadingProfile} style={{ display: 'none' }} />
-                </label>
-              </div>
-              
-              {uploadingProfile && <p style={{ fontSize: '12px', color: 'var(--accent)', margin: '0 0 10px 0' }}>A enviar foto...</p>}
-
-              <form onSubmit={atualizarNome}>
-                <input 
-                  className="input-field" type="text" value={username} onChange={(e) => setUsername(e.target.value)} 
-                  placeholder="O teu nome" required style={{ textAlign: 'center', fontWeight: 'bold' }}
-                />
-                <button className="btn-primary" style={{ display: 'flex', justifyContent: 'center', gap: '8px', margin: '10px 0 0 0' }}>
-                  <Save size={18} /> Atualizar Perfil
-                </button>
-              </form>
-            </div>
-
-            <h3 style={{ margin: '25px 0 10px 5px', fontSize: '13px', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-              ⚙️ Definições da App
-            </h3>
-
-            <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
-              <div onClick={toggleTheme} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ background: isDarkMode ? '#334155' : '#fef08a', padding: '10px', borderRadius: '10px' }}>
-                    {isDarkMode ? <Moon size={20} color="#94a3b8" /> : <Sun size={20} color="#eab308" />}
-                  </div>
-                  <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>Modo Escuro</span>
-                </div>
-                <div style={{ width: '50px', height: '28px', background: isDarkMode ? 'var(--accent)' : '#cbd5e1', borderRadius: '30px', position: 'relative', transition: 'background 0.3s' }}>
-                  <div style={{ width: '22px', height: '22px', background: 'white', borderRadius: '50%', position: 'absolute', top: '3px', left: isDarkMode ? '25px' : '3px', transition: 'left 0.3s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
-                </div>
-              </div>
-
-              <div onClick={toggleNotificacoes} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px', cursor: 'pointer' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ background: pushEnabled ? '#dcfce7' : '#fee2e2', padding: '10px', borderRadius: '10px' }}>
-                    {pushEnabled ? <Bell size={20} color="#16a34a" /> : <BellOff size={20} color="#dc2626" />}
-                  </div>
-                  <div>
-                    <span style={{ fontWeight: 'bold', color: 'var(--text)', display: 'block' }}>Notificações</span>
-                    <span style={{ fontSize: '11px', color: 'var(--text-dim)' }}>{pushEnabled ? 'Ativadas' : 'Desativadas'}</span>
-                  </div>
-                </div>
-                <div style={{ width: '50px', height: '28px', background: pushEnabled ? '#22c55e' : '#ef4444', borderRadius: '30px', position: 'relative', transition: 'background 0.3s' }}>
-                  <div style={{ width: '22px', height: '22px', background: 'white', borderRadius: '50%', position: 'absolute', top: '3px', left: pushEnabled ? '25px' : '3px', transition: 'left 0.3s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
-                </div>
-              </div>
-            </div>
-
-            <button onClick={() => supabase.auth.signOut()} style={{ background: '#fee2e2', color: '#ef4444', border: 'none', width: '100%', padding: '16px', borderRadius: '12px', fontWeight: 'bold', fontSize: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginTop: '30px', cursor: 'pointer' }}>
-              <LogOut size={20} /> Terminar Sessão
-            </button>
-
-          </div>
-        )}
       </div>
 
-      {/* A NOVA NAVBAR HORIZONTAL - TIPO DOCK MODERNO */}
+      {/* GAVETA MÁGICA (BOTTOM SHEET) */}
+      {isMenuOpen && (
+        <>
+          {/* Fundo escuro atrás da gaveta */}
+          <div 
+            onClick={() => setIsMenuOpen(false)}
+            style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 998, animation: 'fadeInBackdrop 0.3s ease-out' }}
+          />
+
+          {/* A Gaveta em si */}
+          <div style={{
+            position: 'fixed', bottom: 0, left: 0, width: '100%', maxHeight: '90vh', overflowY: 'auto',
+            background: 'var(--bg-card)', borderRadius: '24px 24px 0 0', zIndex: 999, 
+            boxShadow: '0 -10px 40px rgba(0,0,0,0.2)', animation: 'slideUpDrawer 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+            paddingBottom: 'calc(20px + env(safe-area-inset-bottom))'
+          }}>
+            
+            {/* O "Tracinho" do topo (Drag Handle visual) */}
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'center', paddingTop: '15px', paddingBottom: '10px' }}>
+              <div style={{ width: '40px', height: '5px', background: 'var(--text-dim)', borderRadius: '10px', opacity: 0.3 }} />
+            </div>
+
+            <div style={{ padding: '0 20px' }}>
+              
+              {/* HEADER DO PERFIL NA GAVETA */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '25px' }}>
+                <div style={{ position: 'relative', width: '70px', height: '70px' }}>
+                  <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'var(--input-bg)', border: '2px solid var(--accent)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {avatarUrl ? <img src={avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <User size={30} color="var(--text-dim)" />}
+                  </div>
+                  <label style={{ position: 'absolute', bottom: '-5px', right: '-5px', background: 'var(--accent)', color: 'white', width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '2px solid var(--bg-card)' }}>
+                    <Camera size={14} />
+                    <input type="file" accept="image/*" onChange={atualizarFoto} disabled={uploadingProfile} style={{ display: 'none' }} />
+                  </label>
+                </div>
+                
+                <form onSubmit={atualizarNome} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <input 
+                    type="text" value={username} onChange={(e) => setUsername(e.target.value)} 
+                    placeholder="O teu nome" required 
+                    style={{ background: 'transparent', border: 'none', fontSize: '20px', fontWeight: 'bold', color: 'var(--text)', outline: 'none', padding: '0 0 5px 0', borderBottom: '1px dashed var(--border)' }}
+                  />
+                  {uploadingProfile ? (
+                    <span style={{ fontSize: '12px', color: 'var(--accent)', marginTop: '5px' }}>A guardar foto...</span>
+                  ) : (
+                    <button type="submit" style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', fontSize: '12px', textAlign: 'left', padding: '5px 0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Save size={12} /> Guardar Nome
+                    </button>
+                  )}
+                </form>
+              </div>
+
+              {/* GRELHA DE APPS EXTRA */}
+              <h4 style={{ margin: '0 0 15px 0', fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-dim)', fontWeight: '800' }}>Explorar</h4>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', marginBottom: '30px' }}>
+                <div onClick={() => goToTab('arena')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <div style={{ background: 'rgba(249, 115, 22, 0.1)', padding: '15px', borderRadius: '16px' }}><Gamepad2 size={24} color="var(--accent)" /></div>
+                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text)' }}>Arena</span>
+                </div>
+                
+                <div onClick={() => goToTab('compras')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '15px', borderRadius: '16px' }}><ShoppingCart size={24} color="#10b981" /></div>
+                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text)' }}>Radar</span>
+                </div>
+
+                <div onClick={() => goToTab('livro')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <div style={{ background: 'rgba(249, 115, 22, 0.1)', padding: '15px', borderRadius: '16px' }}><BookOpen size={24} color="var(--accent)" /></div>
+                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text)' }}>Livro</span>
+                </div>
+
+                <div onClick={() => goToTab('camera')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '15px', borderRadius: '16px' }}><Camera size={24} color="#3b82f6" /></div>
+                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text)' }}>Câmara</span>
+                </div>
+
+                <div onClick={() => goToTab('stats')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <div style={{ background: 'rgba(139, 92, 246, 0.1)', padding: '15px', borderRadius: '16px' }}><BarChart3 size={24} color="#8b5cf6" /></div>
+                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text)' }}>Stats</span>
+                </div>
+              </div>
+
+              {/* DEFINIÇÕES */}
+              <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-dim)', fontWeight: '800' }}>Definições</h4>
+              <div style={{ background: 'var(--input-bg)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden', marginBottom: '20px' }}>
+                <div onClick={toggleTheme} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Moon size={20} color="var(--text)" />
+                    <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>Modo Escuro</span>
+                  </div>
+                  <div style={{ width: '44px', height: '24px', background: isDarkMode ? 'var(--accent)' : 'var(--text-dim)', borderRadius: '30px', position: 'relative', transition: 'background 0.3s' }}>
+                    <div style={{ width: '18px', height: '18px', background: 'white', borderRadius: '50%', position: 'absolute', top: '3px', left: isDarkMode ? '23px' : '3px', transition: 'left 0.3s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+                  </div>
+                </div>
+
+                <div onClick={toggleNotificacoes} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px', cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {pushEnabled ? <Bell size={20} color="var(--text)" /> : <BellOff size={20} color="var(--text)" />}
+                    <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>Notificações</span>
+                  </div>
+                  <div style={{ width: '44px', height: '24px', background: pushEnabled ? '#10b981' : 'var(--text-dim)', borderRadius: '30px', position: 'relative', transition: 'background 0.3s' }}>
+                    <div style={{ width: '18px', height: '18px', background: 'white', borderRadius: '50%', position: 'absolute', top: '3px', left: pushEnabled ? '23px' : '3px', transition: 'left 0.3s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* LOGOUT */}
+              <button onClick={() => supabase.auth.signOut()} style={{ background: '#fee2e2', color: '#ef4444', border: 'none', width: '100%', padding: '15px', borderRadius: '16px', fontWeight: 'bold', fontSize: '15px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <LogOut size={18} /> Terminar Sessão
+              </button>
+
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* NAVBAR FIXA E LIMPA (Padrão Nativo) */}
       <div style={{
-        position: 'fixed', bottom: 'max(15px, env(safe-area-inset-bottom))', left: '50%', transform: 'translateX(-50%)',
-        width: '95%', maxWidth: '450px', background: 'var(--bg-card)', 
-        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-        borderRadius: '25px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-        border: '1px solid var(--border)', zIndex: 1000, overflow: 'hidden'
+        position: 'fixed', bottom: 0, left: 0, width: '100%', 
+        background: 'var(--bg-card)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)',
+        borderTop: '1px solid var(--border)', zIndex: 100,
+        paddingBottom: 'env(safe-area-inset-bottom)'
       }}>
-        <div className="scroll-navbar" style={{
-          display: 'flex', overflowX: 'auto', gap: '5px', padding: '10px 15px', 
-          WebkitOverflowScrolling: 'touch', alignItems: 'center'
-        }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 10px' }}>
           
-          <button style={navItemStyle(tab === 'feed')} onClick={() => setTab('feed')}>
-            <Home size={22} />
-            <span style={{ fontSize: '10px' }}>Feed</span>
+          <button style={navItemStyle(tab === 'feed' && !isMenuOpen)} onClick={() => goToTab('feed')}>
+            <Home size={24} strokeWidth={tab === 'feed' && !isMenuOpen ? 2.5 : 2} />
+            <span style={{ fontSize: '10px', marginTop: '2px', fontWeight: tab === 'feed' && !isMenuOpen ? '800' : '600' }}>Feed</span>
           </button>
           
-          <button style={navItemStyle(tab === 'tasca')} onClick={() => setTab('tasca')}>
-            <Beer size={22} />
-            <span style={{ fontSize: '10px' }}>Tasca</span>
+          <button style={navItemStyle(tab === 'tasca' && !isMenuOpen)} onClick={() => goToTab('tasca')}>
+            <Beer size={24} strokeWidth={tab === 'tasca' && !isMenuOpen ? 2.5 : 2} />
+            <span style={{ fontSize: '10px', marginTop: '2px', fontWeight: tab === 'tasca' && !isMenuOpen ? '800' : '600' }}>Tasca</span>
           </button>
           
-          <button style={navItemStyle(tab === 'missoes')} onClick={() => setTab('missoes')}>
-            <Target size={22} />
-            <span style={{ fontSize: '10px' }}>Missões</span>
+          <button style={navItemStyle(tab === 'missoes' && !isMenuOpen)} onClick={() => goToTab('missoes')}>
+            <Target size={24} strokeWidth={tab === 'missoes' && !isMenuOpen ? 2.5 : 2} />
+            <span style={{ fontSize: '10px', marginTop: '2px', fontWeight: tab === 'missoes' && !isMenuOpen ? '800' : '600' }}>Missões</span>
           </button>
 
-          <button style={navItemStyle(tab === 'arena')} onClick={() => setTab('arena')}>
-            <Gamepad2 size={22} />
-            <span style={{ fontSize: '10px' }}>Arena</span>
-          </button>
-
-          <button style={navItemStyle(tab === 'compras')} onClick={() => setTab('compras')}>
-            <ShoppingCart size={22} />
-            <span style={{ fontSize: '10px' }}>Radar</span>
-          </button>
-
-          <button style={navItemStyle(tab === 'livro')} onClick={() => setTab('livro')}>
-            <BookOpen size={22} />
-            <span style={{ fontSize: '10px' }}>Livro</span>
-          </button>
-
-          <button style={navItemStyle(tab === 'camera')} onClick={() => setTab('camera')}>
-            <Camera size={22} />
-            <span style={{ fontSize: '10px' }}>Câmara</span>
-          </button>
-
-          <button style={navItemStyle(tab === 'stats')} onClick={() => setTab('stats')}>
-            <BarChart3 size={22} />
-            <span style={{ fontSize: '10px' }}>Stats</span>
+          {/* O BOTÃO QUE ABRE A GAVETA */}
+          <button style={navItemStyle(isMenuOpen)} onClick={() => setIsMenuOpen(!isMenuOpen)}>
+            {isMenuOpen ? <X size={24} strokeWidth={2.5} /> : <Menu size={24} />}
+            <span style={{ fontSize: '10px', marginTop: '2px', fontWeight: isMenuOpen ? '800' : '600' }}>Mais</span>
           </button>
 
         </div>
