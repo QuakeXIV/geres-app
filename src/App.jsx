@@ -66,34 +66,45 @@ export default function App() {
     }
   }
 
-  // INICIAR ONESIGNAL
+  // 1. INICIA O ONESIGNAL (Lógica original que funciona 100%)
   useEffect(() => {
-    if (!session?.user?.id || oneSignalInitRef.current) return;
+    if (oneSignalInitRef.current) return;
     oneSignalInitRef.current = true; 
 
-    async function setupOneSignal() {
+    async function startOneSignal() {
       try {
         await OneSignal.init({
           appId: "2505560e-8033-4528-997c-eca674fa3230",
           allowLocalhostAsSecureOrigin: true,
           notifyButton: { enable: false }, 
         });
-        
-        if (OneSignal.login) await OneSignal.login(session.user.id);
-        
+
         if (OneSignal.User && OneSignal.User.PushSubscription) {
-          OneSignal.User.addTag("app_user_id", session.user.id);
-          setPushEnabled(OneSignal.User.PushSubscription.optedIn);
-        } else if (OneSignal.isPushNotificationsEnabled) {
-          OneSignal.sendTag("app_user_id", session.user.id);
-          const isEnabled = await OneSignal.isPushNotificationsEnabled();
-          setPushEnabled(isEnabled);
+          const isAtivo = OneSignal.User.PushSubscription.optedIn;
+          setPushEnabled(isAtivo);
         }
-      } catch (error) { 
-        console.error("Erro crítico no OneSignal:", error); 
+      } catch (error) {
+        console.error("Erro ao iniciar OneSignal:", error);
       }
     }
-    setupOneSignal();
+    
+    startOneSignal();
+  }, []);
+
+  // 2. ASSOCIA O UTILIZADOR E DEFINE A TAG
+  useEffect(() => {
+    if (session?.user?.id) {
+      try {
+        OneSignal.login(session.user.id);
+        if (OneSignal.User) {
+          OneSignal.User.addTag("app_user_id", session.user.id);
+        } else {
+          OneSignal.sendTag("app_user_id", session.user.id);
+        }
+      } catch (e) {
+        console.log("OneSignal login/tag erro:", e);
+      }
+    }
   }, [session]);
 
   if (!session) return <Auth />;
@@ -137,6 +148,7 @@ export default function App() {
     document.body.setAttribute('data-theme', novoTema);
   }
 
+  // 3. TOGGLE DE NOTIFICAÇÕES (Lógica original e à prova de bala)
   const toggleNotificacoes = async () => {
     try {
       if (OneSignal.User && OneSignal.User.PushSubscription) {
@@ -145,23 +157,14 @@ export default function App() {
           setPushEnabled(false); 
           showToast("Notificações desativadas 🔕", "error");
         } else {
-          if (OneSignal.Slidedown) await OneSignal.Slidedown.promptPush();
           await OneSignal.User.PushSubscription.optIn();
+          if (OneSignal.Slidedown) await OneSignal.Slidedown.promptPush();
           setPushEnabled(true); 
           showToast("Notificações ativadas 🔔", "success");
         }
-      } else if (OneSignal.isPushNotificationsEnabled) {
-        if (pushEnabled) {
-          await OneSignal.setSubscription(false);
-          setPushEnabled(false);
-        } else {
-          await OneSignal.showSlidedownPrompt();
-          await OneSignal.setSubscription(true);
-          setPushEnabled(true);
-        }
       }
-    } catch (error) { 
-      console.error("Erro notificações:", error);
+    } catch (error) {
+      console.error("Erro no toggle de notificações:", error);
     }
   };
 
@@ -188,7 +191,7 @@ export default function App() {
     }
   }
 
-  // ESTILOS DA NAVBAR - Agora são 5 botões, logo width: 20%
+  // ESTILOS DA NAVBAR
   const navItemStyle = (isActive) => ({
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', 
     padding: '8px 0', width: '20%',
@@ -257,7 +260,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* CONTEÚDO DAS ABAS (Removido o paddingBottom de 100px extra que criava o espaço vazio) */}
+      {/* CONTEÚDO DAS ABAS */}
       <div>
         {tab === 'feed' && <Feed session={session} />}
         {tab === 'tasca' && <Tasca session={session} />}
@@ -318,7 +321,7 @@ export default function App() {
                 </form>
               </div>
 
-              {/* GRELHA DE APPS EXTRA (Agora sem a Câmara porque ela desceu para a Navbar) */}
+              {/* GRELHA DE APPS EXTRA */}
               <h4 style={{ margin: '0 0 15px 0', fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-dim)', fontWeight: '800' }}>Explorar</h4>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', marginBottom: '30px' }}>
@@ -377,7 +380,7 @@ export default function App() {
         </>
       )}
 
-      {/* NAVBAR FIXA E LIMPA (Agora com 5 Botões) */}
+      {/* NAVBAR FIXA COM OS 5 BOTÕES */}
       <div style={{
         position: 'fixed', bottom: 0, left: 0, width: '100%', 
         background: 'var(--bg-card)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)',
@@ -401,7 +404,6 @@ export default function App() {
             <span style={{ fontSize: '10px', marginTop: '2px', fontWeight: tab === 'missoes' && !isMenuOpen ? '800' : '600' }}>Missões</span>
           </button>
 
-          {/* CÂMARA ADICIONADA À NAVBAR */}
           <button style={navItemStyle(tab === 'camera' && !isMenuOpen)} onClick={() => goToTab('camera')}>
             <Camera size={24} strokeWidth={tab === 'camera' && !isMenuOpen ? 2.5 : 2} />
             <span style={{ fontSize: '10px', marginTop: '2px', fontWeight: tab === 'camera' && !isMenuOpen ? '800' : '600' }}>Câmara</span>
