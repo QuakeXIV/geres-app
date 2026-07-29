@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Target, Trophy, CheckCircle, Circle, ShieldAlert, Zap, Gavel, ThumbsUp, Clock } from 'lucide-react';
+import { Target, Trophy, CheckCircle, Circle, ShieldAlert, Zap, Gavel, ThumbsUp, Clock, RefreshCw } from 'lucide-react';
 
 export default function Missoes({ session }) {
   const [subTab, setSubTab] = useState('diarios');
@@ -14,6 +14,7 @@ export default function Missoes({ session }) {
   const [leaderboard, setLeaderboard] = useState([]);
   
   const [loadingAction, setLoadingAction] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   function showToast(message, type = 'success') {
@@ -94,7 +95,8 @@ export default function Missoes({ session }) {
     };
   }, []);
 
-  async function carregarDados(dataHoje) {
+  async function carregarDados(dataHoje = todayStr) {
+    setIsRefreshing(true);
     const { data: reqsData } = await supabase.from('challenge_requests').select('*');
     const { data: appsData } = await supabase.from('challenge_approvals').select('*');
     const { data: profsData } = await supabase.from('profiles').select('id, username');
@@ -127,6 +129,7 @@ export default function Missoes({ session }) {
       .sort((a, b) => b.total - a.total);
 
     setLeaderboard(rankingArray);
+    setIsRefreshing(false);
   }
 
   async function pedirAprovacao(localIndex) {
@@ -209,6 +212,13 @@ export default function Missoes({ session }) {
           {toast.message}
         </div>
       )}
+
+      {/* BOTÃO DE REFRESH MANUAL NO TOPO */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
+        <button onClick={() => carregarDados(todayStr)} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #e2e8f0', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+          <RefreshCw size={16} /> {isRefreshing ? 'A atualizar...' : 'Atualizar Missões'}
+        </button>
+      </div>
 
       {/* CABEÇALHO */}
       <div className="card" style={{ textAlign: 'center', background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', color: 'white' }}>
