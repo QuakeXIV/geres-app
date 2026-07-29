@@ -126,24 +126,6 @@ export default function Tasca({ session }) {
       showToast(`Erro ao gravar: ${error.message}`, 'error');
     } else {
       showToast('Consumo registado com sucesso! 🍻', 'success');
-      
-      // 3. ENVIA A NOTIFICAÇÃO
-      try {
-        const { data: profile } = await supabase.from('profiles').select('username').eq('id', session.user.id).single();
-        await fetch('https://geres-app.vercel.app/api/notify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'new_drink',
-            actorName: profile?.username || 'Alguém',
-            extraInfo: `${quantidade}x ${selectedDrink}`,
-            actingId: session.user.id
-          })
-        });
-      } catch (err) {
-        console.log("Erro a notificar:", err);
-      }
-
       setSelectedDrink('');
       setQuantidade(1);
       await carregarDadosTasca(); 

@@ -32,6 +32,30 @@ export default async function handler(req, res) {
     title = "As fotos foram reveladas! 📸";
     message = "Corre para a Câmara Descartável para ver as figuras de ontem à noite!";
     targetTab = "camera";
+
+    // Vamos perguntar diretamente à Base de Dados quem foi o último a publicar uma foto descartável
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (supabaseUrl && supabaseKey) {
+      try {
+        const url = `${supabaseUrl}/rest/v1/posts?is_disposable=eq.true&select=profiles(username)&order=created_at.desc&limit=1`;
+        const dbRes = await fetch(url, {
+          headers: {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`
+          }
+        });
+        const dbData = await dbRes.json();
+        
+        if (dbData && dbData.length > 0 && dbData[0].profiles?.username) {
+          const ultimoMembro = dbData[0].profiles.username;
+          message = `@${ultimoMembro} foi a última pessoa a esconder lá uma foto. Vai ver a desgraça!`;
+        }
+      } catch (err) {
+        console.log("Erro a ir buscar o último fotógrafo:", err);
+      }
+    }
   } 
   
   // 2. LÓGICA DIRETA DA APP (FRONTEND) COM NOMES REAIS
@@ -65,29 +89,16 @@ export default async function handler(req, res) {
       title = "Nova pérola no Livro! 📖";
       message = `${actorName} eternizou uma barbaridade dita por ${extraInfo}!`;
       targetTab = "livro";
-    } else if (action === 'new_drink') {
-      title = "Mais uma para a conta! 🍻";
-      message = `${actorName} acabou de registar ${extraInfo} na Tasca.`;
-      targetTab = "tasca";
-    } else if (action === 'new_disposable') {
-      title = "Click! 📸";
-      message = `${actorName} acabou de tirar uma foto descartável! Prepara a vingança.`;
-      targetTab = "camera";
     } else {
       return res.status(200).json({ message: 'Ação ignorada' });
     }
-  } 
-  
-  // 3. SEGURANÇA: Se o Supabase ainda tentar enviar gatilhos antigos, ignoramos pacificamente.
-  else if (req.body && req.body.table) {
-    return res.status(200).json({ message: 'Aviso antigo do Supabase ignorado. Frontend assume o controlo.' });
   } 
   
   else {
     return res.status(400).json({ error: 'Pedido inválido' });
   }
 
-  // 4. DISPARAR PARA O ONESIGNAL
+  // 3. DISPARAR PARA O ONESIGNAL
   try {
     const bodyPayload = {
       app_id: ONESIGNAL_APP_ID,
