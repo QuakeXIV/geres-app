@@ -11,10 +11,9 @@ import Estatisticas from './components/Estatisticas';
 import Compras from './components/Compras';
 import Arena from './components/Arena';
 import Perfil from './components/Perfil';
-import Descobrir from './components/Descobrir';
 import TutorialInstalacao from './components/TutorialInstalacao';
 import PermissaoNotificacoes from './components/PermissaoNotificacoes';
-import { Home, Beer, Target, LayoutGrid, LogOut, Sun, BookOpen, BarChart3, ShoppingCart, Camera, Gamepad2, ChevronRight, Bell, BellOff, Map, User } from 'lucide-react';
+import { Home, Beer, Target, LayoutGrid, LogOut, Sun, BookOpen, BarChart3, ShoppingCart, Camera, Gamepad2, ChevronRight, Bell, BellOff, User } from 'lucide-react';
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -106,11 +105,11 @@ export default function App() {
   });
 
   const menuCardStyle = {
-    background: 'var(--bg-card)', borderRadius: '16px', padding: '20px 15px',
+    background: 'var(--bg-card)', borderRadius: '16px', padding: '15px',
     display: 'flex', flexDirection: 'column', alignItems: 'center',
-    justifyContent: 'center', gap: '10px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
+    justifyContent: 'center', gap: '10px', boxShadow: '0 4px 10px rgba(0,0,0,0.03)',
     border: '1px solid var(--border)', cursor: 'pointer', transition: 'transform 0.2s',
-    textAlign: 'center', position: 'relative'
+    textAlign: 'center', position: 'relative', height: '100%'
   };
 
   // 3. TOGGLE DE NOTIFICAÇÕES REAL E INTUITIVO
@@ -119,12 +118,12 @@ export default function App() {
       if (OneSignal.User && OneSignal.User.PushSubscription) {
         if (pushEnabled) {
           await OneSignal.User.PushSubscription.optOut();
-          setPushEnabled(false); // Atualiza logo o visual para vermelho
+          setPushEnabled(false); 
           showToast("Notificações desativadas 🔕", "error");
         } else {
           await OneSignal.User.PushSubscription.optIn();
           if (OneSignal.Slidedown) await OneSignal.Slidedown.promptPush();
-          setPushEnabled(true); // Atualiza logo o visual para verde
+          setPushEnabled(true); 
           showToast("Notificações ativadas 🔔", "success");
         }
       }
@@ -179,110 +178,107 @@ export default function App() {
         {tab === 'camera' && <DisposableCamera session={session} />}
         {tab === 'arena' && <Arena session={session} />}
         {tab === 'perfil' && <Perfil session={session} />}
-        {tab === 'descobrir' && <Descobrir />}
         
+        {/* O NOVO MENU BONITÃO */}
         {tab === 'menu' && (
-          <div style={{ padding: '20px' }}>
-            <h2 style={{ margin: '0 0 20px 0', color: 'var(--text)', fontSize: '24px' }}>Menu Principal</h2>
+          <div style={{ padding: '10px' }}>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+            {/* CABEÇALHO DO MENU */}
+            <div className="card" style={{ textAlign: 'center', background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', color: 'white', padding: '20px' }}>
+              <h2 style={{ margin: '0 0 5px 0', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+                <LayoutGrid size={26} /> Menu da App
+              </h2>
+              <p style={{ margin: 0, fontSize: '14px', opacity: 0.9 }}>Navega por todos os cantos da viagem.</p>
+            </div>
+
+            {/* SECÇÃO 1: O TEU ESPAÇO */}
+            <h3 style={{ margin: '20px 0 10px 10px', fontSize: '14px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              👤 O Teu Espaço
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               
-              {/* CARTÃO DO PERFIL */}
               <div style={menuCardStyle} onClick={() => setTab('perfil')}>
-                <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
-                  <User size={28} color="var(--accent)" />
-                </div>
-                <div>
-                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>O Meu Perfil</h4>
-                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Foto e Definições</p>
-                </div>
-              </div>
-
-              {/* CARTÃO DO DESCOBRIR */}
-              <div style={menuCardStyle} onClick={() => setTab('descobrir')}>
                 <div style={{ background: '#dbeafe', padding: '12px', borderRadius: '50%' }}>
-                  <Map size={28} color="#3b82f6" />
+                  <User size={24} color="#3b82f6" />
                 </div>
                 <div>
-                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>Descobrir</h4>
-                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Gerês Guia</p>
+                  <h4 style={{ margin: '0 0 2px 0', color: 'var(--text)', fontSize: '15px' }}>Perfil</h4>
+                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Foto e Tema</p>
                 </div>
               </div>
 
-              {/* CARTÃO DO LIVRO */}
+              <div 
+                style={{ ...menuCardStyle, border: pushEnabled ? '2px solid #22c55e' : '1px solid var(--border)' }} 
+                onClick={toggleNotificacoes}
+              >
+                <div style={{
+                  position: 'absolute', top: '10px', right: '10px', width: '10px', height: '10px', borderRadius: '50%',
+                  background: pushEnabled ? '#22c55e' : '#ef4444',
+                  boxShadow: pushEnabled ? '0 0 8px rgba(34, 197, 94, 0.6)' : 'none'
+                }} />
+                <div style={{ background: pushEnabled ? '#dcfce7' : '#fee2e2', padding: '12px', borderRadius: '50%' }}>
+                  {pushEnabled ? <Bell size={24} color="#16a34a" /> : <BellOff size={24} color="#dc2626" />}
+                </div>
+                <div>
+                  <h4 style={{ margin: '0 0 2px 0', color: 'var(--text)', fontSize: '15px' }}>Alertas</h4>
+                  <p style={{ margin: 0, fontSize: '11px', fontWeight: 'bold', color: pushEnabled ? '#16a34a' : '#dc2626' }}>
+                    {pushEnabled ? 'LIGADOS' : 'DESLIGADOS'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* SECÇÃO 2: A VIAGEM */}
+            <h3 style={{ margin: '25px 0 10px 10px', fontSize: '14px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              🚌 A Viagem
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              
               <div style={menuCardStyle} onClick={() => setTab('livro')}>
                 <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
-                  <BookOpen size={28} color="var(--accent)" />
+                  <BookOpen size={24} color="var(--accent)" />
                 </div>
                 <div>
-                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>O Livro</h4>
+                  <h4 style={{ margin: '0 0 2px 0', color: 'var(--text)', fontSize: '15px' }}>O Livro</h4>
                   <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Frases míticas</p>
                 </div>
               </div>
 
-              {/* CARTÃO DA CÂMARA */}
               <div style={menuCardStyle} onClick={() => setTab('camera')}>
                 <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
-                  <Camera size={28} color="var(--accent)" />
+                  <Camera size={24} color="var(--accent)" />
                 </div>
                 <div>
-                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>Câmara</h4>
+                  <h4 style={{ margin: '0 0 2px 0', color: 'var(--text)', fontSize: '15px' }}>Câmara</h4>
                   <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Descartável</p>
                 </div>
               </div>
 
-              {/* CARTÃO DAS ESTATÍSTICAS */}
               <div style={menuCardStyle} onClick={() => setTab('stats')}>
                 <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
-                  <BarChart3 size={28} color="var(--accent)" />
+                  <BarChart3 size={24} color="var(--accent)" />
                 </div>
                 <div>
-                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>Estatísticas</h4>
+                  <h4 style={{ margin: '0 0 2px 0', color: 'var(--text)', fontSize: '15px' }}>Estatísticas</h4>
                   <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Gerês Wrapped</p>
                 </div>
               </div>
 
-              {/* CARTÃO DO RADAR DA FOME */}
               <div style={menuCardStyle} onClick={() => setTab('compras')}>
                 <div style={{ background: '#dcfce7', padding: '12px', borderRadius: '50%' }}>
-                  <ShoppingCart size={28} color="#10b981" />
+                  <ShoppingCart size={24} color="#10b981" />
                 </div>
                 <div>
-                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>Radar da Fome</h4>
-                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Lista de compras</p>
+                  <h4 style={{ margin: '0 0 2px 0', color: 'var(--text)', fontSize: '15px' }}>Radar da Fome</h4>
+                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Compras</p>
                 </div>
               </div>
-
-              {/* CARTÃO DE NOTIFICAÇÕES */}
-              <div 
-                style={{ 
-                  ...menuCardStyle, 
-                  border: pushEnabled ? '2px solid #22c55e' : '2px solid var(--border)'
-                }} 
-                onClick={toggleNotificacoes}
-              >
-                <div style={{
-                  position: 'absolute', top: '12px', right: '12px',
-                  width: '10px', height: '10px', borderRadius: '50%',
-                  background: pushEnabled ? '#22c55e' : '#ef4444',
-                  boxShadow: pushEnabled ? '0 0 8px rgba(34, 197, 94, 0.6)' : 'none'
-                }} />
-                
-                <div style={{ background: pushEnabled ? '#dcfce7' : '#fee2e2', padding: '12px', borderRadius: '50%' }}>
-                  {pushEnabled ? <Bell size={28} color="#16a34a" /> : <BellOff size={28} color="#dc2626" />}
-                </div>
-                <div>
-                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>Notificações</h4>
-                  <p style={{ margin: 0, fontSize: '11px', fontWeight: 'bold', color: pushEnabled ? '#16a34a' : '#dc2626' }}>
-                    {pushEnabled ? 'LIGADAS' : 'DESLIGADAS'}
-                  </p>
-                </div>
-              </div>
-
             </div>
 
-            <h3 style={{ margin: '30px 0 15px 0', color: 'var(--text)', fontSize: '18px' }}>Competição</h3>
-            
+            {/* SECÇÃO 3: COMPETIÇÃO */}
+            <h3 style={{ margin: '25px 0 10px 10px', fontSize: '14px', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              ⚔️ Competição
+            </h3>
             <div 
               style={{ ...menuCardStyle, flexDirection: 'row', justifyContent: 'space-between', padding: '20px', background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', border: 'none' }}
               onClick={() => setTab('arena')}
@@ -303,6 +299,7 @@ export default function App() {
         )}
       </div>
 
+      {/* NAVBAR INFERIOR */}
       <div style={{
         position: 'fixed', bottom: 'max(20px, env(safe-area-inset-bottom))', left: '50%', transform: 'translateX(-50%)',
         width: '92%', maxWidth: '400px', background: 'var(--bg-card)', backdropFilter: 'blur(15px)',
@@ -322,9 +319,9 @@ export default function App() {
           <Target size={22} />
           {tab === 'missoes' && <span>Missões</span>}
         </button>
-        <button style={navItemStyle(tab === 'menu')} onClick={() => setTab('menu')}>
+        <button style={navItemStyle(tab === 'menu' || tab === 'livro' || tab === 'stats' || tab === 'compras' || tab === 'camera' || tab === 'arena' || tab === 'perfil')} onClick={() => setTab('menu')}>
           <LayoutGrid size={22} />
-          {tab === 'menu' && <span>Menu</span>}
+          {(tab === 'menu' || tab === 'livro' || tab === 'stats' || tab === 'compras' || tab === 'camera' || tab === 'arena' || tab === 'perfil') && <span>Menu</span>}
         </button>
       </div>
 
