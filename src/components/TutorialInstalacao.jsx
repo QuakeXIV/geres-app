@@ -44,10 +44,10 @@ export default function TutorialInstalacao() {
       </button>
 
       {/* Cartão que desliza de baixo para cima */}
-      <div style={{ background: 'white', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '30px 20px', animation: 'slideUp 0.4s ease-out' }}>
+      <div style={{ background: 'var(--bg-card)', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', padding: '30px 20px', animation: 'slideUp 0.4s ease-out', borderTop: '1px solid var(--border)' }}>
         
         <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-          <div style={{ background: '#ffedd5', width: '60px', height: '60px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px auto' }}>
+          <div style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', width: '60px', height: '60px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px auto' }}>
             <Smartphone size={32} color="var(--accent)" />
           </div>
           <h2 style={{ margin: '0 0 10px 0', color: 'var(--text)', fontSize: '22px' }}>Instala a App do Gerês!</h2>
@@ -58,11 +58,11 @@ export default function TutorialInstalacao() {
 
         {/* INSTRUÇÕES PARA IPHONE */}
         {device === 'ios' && (
-          <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-            <h4 style={{ margin: '0 0 15px 0', fontSize: '13px', textTransform: 'uppercase', color: '#64748b' }}>Como instalar no iPhone:</h4>
+          <div style={{ background: 'var(--input-bg)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border)' }}>
+            <h4 style={{ margin: '0 0 15px 0', fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-dim)' }}>Como instalar no iPhone:</h4>
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
-              <div style={{ background: 'white', padding: '8px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+              <div style={{ background: 'var(--bg-card)', padding: '8px', borderRadius: '8px', border: '1px solid var(--border)' }}>
                 <Share size={24} color="#007AFF" />
               </div>
               <p style={{ margin: 0, fontSize: '15px', color: 'var(--text)' }}>
@@ -71,7 +71,7 @@ export default function TutorialInstalacao() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-              <div style={{ background: 'white', padding: '8px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+              <div style={{ background: 'var(--bg-card)', padding: '8px', borderRadius: '8px', border: '1px solid var(--border)' }}>
                 <PlusSquare size={24} color="var(--text)" />
               </div>
               <p style={{ margin: 0, fontSize: '15px', color: 'var(--text)' }}>
@@ -83,11 +83,11 @@ export default function TutorialInstalacao() {
 
         {/* INSTRUÇÕES PARA ANDROID */}
         {device === 'android' && (
-          <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-            <h4 style={{ margin: '0 0 15px 0', fontSize: '13px', textTransform: 'uppercase', color: '#64748b' }}>Como instalar no Android:</h4>
+          <div style={{ background: 'var(--input-bg)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border)' }}>
+            <h4 style={{ margin: '0 0 15px 0', fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-dim)' }}>Como instalar no Android:</h4>
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
-              <div style={{ background: 'white', padding: '8px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+              <div style={{ background: 'var(--bg-card)', padding: '8px', borderRadius: '8px', border: '1px solid var(--border)' }}>
                 <MoreVertical size={24} color="var(--text)" />
               </div>
               <p style={{ margin: 0, fontSize: '15px', color: 'var(--text)' }}>
@@ -96,7 +96,7 @@ export default function TutorialInstalacao() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-              <div style={{ background: 'white', padding: '8px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+              <div style={{ background: 'var(--bg-card)', padding: '8px', borderRadius: '8px', border: '1px solid var(--border)' }}>
                 <MonitorDown size={24} color="var(--text)" />
               </div>
               <p style={{ margin: 0, fontSize: '15px', color: 'var(--text)' }}>
@@ -108,7 +108,7 @@ export default function TutorialInstalacao() {
 
         {/* INSTRUÇÕES PARA PC */}
         {device === 'desktop' && (
-          <div style={{ textAlign: 'center', padding: '15px', background: '#f8fafc', borderRadius: '16px' }}>
+          <div style={{ textAlign: 'center', padding: '15px', background: 'var(--input-bg)', borderRadius: '16px', border: '1px solid var(--border)' }}>
             <p style={{ margin: 0, fontSize: '15px', color: 'var(--text)' }}>
               Clica no ícone de instalação <MonitorDown size={18} style={{ verticalAlign: 'middle' }}/> na barra de endereço do teu browser no canto superior direito.
             </p>
@@ -117,8 +117,8 @@ export default function TutorialInstalacao() {
 
         {device === 'ios' && (
           <div style={{ textAlign: 'center', marginTop: '20px', animation: 'bounce 2s infinite' }}>
-            <div style={{ width: '4px', height: '30px', background: '#e2e8f0', margin: '0 auto', borderRadius: '4px' }}></div>
-            <div style={{ width: '0', height: '0', borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderTop: '10px solid #e2e8f0', margin: '0 auto' }}></div>
+            <div style={{ width: '4px', height: '30px', background: 'var(--text-dim)', margin: '0 auto', borderRadius: '4px' }}></div>
+            <div style={{ width: '0', height: '0', borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderTop: '10px solid var(--text-dim)', margin: '0 auto' }}></div>
           </div>
         )}
       </div>

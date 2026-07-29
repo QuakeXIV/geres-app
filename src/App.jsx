@@ -51,7 +51,7 @@ export default function App() {
     }
   }, []);
 
-  // CARREGAR O PERFIL ASSIM QUE HÁ SESSÃO
+  // CARREGAR O PERFIL
   useEffect(() => {
     if (session?.user?.id) carregarPerfil();
   }, [session]);
@@ -64,34 +64,36 @@ export default function App() {
     }
   }
 
-  // INICIAR NOTIFICAÇÕES
+  // ⚠️ A GRANDE CORREÇÃO DAS NOTIFICAÇÕES (Fim das falhas)
   useEffect(() => {
-    if (oneSignalInitRef.current) return;
+    // Só iniciamos quando a sessão existe para garantir que a Tag vai certa!
+    if (!session?.user?.id || oneSignalInitRef.current) return;
     oneSignalInitRef.current = true; 
 
-    async function startOneSignal() {
+    async function setupOneSignal() {
       try {
         await OneSignal.init({
           appId: "2505560e-8033-4528-997c-eca674fa3230",
           allowLocalhostAsSecureOrigin: true,
           notifyButton: { enable: false }, 
         });
-        if (OneSignal.User && OneSignal.User.PushSubscription) {
+        
+        // 1. Diz ao OneSignal quem é que acabou de abrir a app
+        await OneSignal.login(session.user.id);
+        
+        // 2. Só DEPOIS de iniciado é que aplicamos a Tag
+        if (OneSignal.User) {
+          OneSignal.User.addTag("app_user_id", session.user.id);
           setPushEnabled(OneSignal.User.PushSubscription.optedIn);
+        } else {
+          OneSignal.sendTag("app_user_id", session.user.id);
         }
-      } catch (error) { console.error("Erro OneSignal:", error); }
+      } catch (error) { 
+        console.error("Erro crítico no OneSignal:", error); 
+      }
     }
-    startOneSignal();
-  }, []);
-
-  useEffect(() => {
-    if (session?.user?.id) {
-      try {
-        OneSignal.login(session.user.id);
-        OneSignal.User ? OneSignal.User.addTag("app_user_id", session.user.id) : OneSignal.sendTag("app_user_id", session.user.id);
-      } catch (e) { console.log(e); }
-    }
-  }, [session]);
+    setupOneSignal();
+  }, [session]); // 👈 Agora o efeito depende da sessão. Se não houver sessão, não há confusão de Tags!
 
   if (!session) return <Auth />;
 
@@ -142,8 +144,8 @@ export default function App() {
           setPushEnabled(false); 
           showToast("Notificações desativadas 🔕", "error");
         } else {
-          await OneSignal.User.PushSubscription.optIn();
           if (OneSignal.Slidedown) await OneSignal.Slidedown.promptPush();
+          await OneSignal.User.PushSubscription.optIn();
           setPushEnabled(true); 
           showToast("Notificações ativadas 🔔", "success");
         }
@@ -176,7 +178,7 @@ export default function App() {
         <div style={{
           position: 'fixed', top: 'calc(60px + env(safe-area-inset-top))', left: '50%', transform: 'translateX(-50%)',
           zIndex: 9999, width: '90%', maxWidth: '400px',
-          background: toast.type === 'error' ? '#ef4444' : 'var(--accent)',
+          background: toast.type === 'error' ? '#ef4444' : 'var(--success)',
           color: 'white', padding: '12px 20px', borderRadius: '12px',
           textAlign: 'center', fontWeight: 'bold', boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
         }}>
@@ -198,7 +200,6 @@ export default function App() {
         </h3>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          {/* Mostra o avatar pequeno no topo também (detalhe premium) */}
           <div style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid var(--accent)', overflow: 'hidden', background: 'var(--bg-main)' }}>
             {avatarUrl ? <img src={avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <User size={16} color="var(--text-dim)" style={{ margin: '6px' }} />}
           </div>
@@ -216,7 +217,7 @@ export default function App() {
         {tab === 'camera' && <DisposableCamera session={session} />}
         {tab === 'arena' && <Arena session={session} />}
         
-        {/* O NOVO MENU (PERFIL E DEFINIÇÕES INLINE) */}
+        {/* O NOVO MENU (PERFIL E DEFINIÇÕES) */}
         {tab === 'menu' && (
           <div style={{ padding: '15px' }}>
             
@@ -251,20 +252,26 @@ export default function App() {
             <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
               
               {/* TOGGLE MODO ESCURO */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px', borderBottom: '1px solid var(--border)' }}>
+              <div 
+                onClick={toggleTheme}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{ background: isDarkMode ? '#334155' : '#fef08a', padding: '10px', borderRadius: '10px' }}>
                     {isDarkMode ? <Moon size={20} color="#94a3b8" /> : <Sun size={20} color="#eab308" />}
                   </div>
                   <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>Modo Escuro</span>
                 </div>
-                <button onClick={toggleTheme} style={{ width: '50px', height: '28px', background: isDarkMode ? 'var(--accent)' : '#cbd5e1', borderRadius: '30px', position: 'relative', border: 'none', cursor: 'pointer', transition: 'background 0.3s' }}>
+                <div style={{ width: '50px', height: '28px', background: isDarkMode ? 'var(--accent)' : '#cbd5e1', borderRadius: '30px', position: 'relative', transition: 'background 0.3s' }}>
                   <div style={{ width: '22px', height: '22px', background: 'white', borderRadius: '50%', position: 'absolute', top: '3px', left: isDarkMode ? '25px' : '3px', transition: 'left 0.3s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
-                </button>
+                </div>
               </div>
 
-              {/* TOGGLE NOTIFICAÇÕES */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px' }}>
+              {/* TOGGLE NOTIFICAÇÕES - AGORA A ROW TODA É CLICÁVEL */}
+              <div 
+                onClick={toggleNotificacoes}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px', cursor: 'pointer' }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{ background: pushEnabled ? '#dcfce7' : '#fee2e2', padding: '10px', borderRadius: '10px' }}>
                     {pushEnabled ? <Bell size={20} color="#16a34a" /> : <BellOff size={20} color="#dc2626" />}
@@ -274,9 +281,9 @@ export default function App() {
                     <span style={{ fontSize: '11px', color: 'var(--text-dim)' }}>{pushEnabled ? 'Ativadas' : 'Desativadas'}</span>
                   </div>
                 </div>
-                <button onClick={toggleNotificacoes} style={{ width: '50px', height: '28px', background: pushEnabled ? '#22c55e' : '#ef4444', borderRadius: '30px', position: 'relative', border: 'none', cursor: 'pointer', transition: 'background 0.3s' }}>
+                <div style={{ width: '50px', height: '28px', background: pushEnabled ? '#22c55e' : '#ef4444', borderRadius: '30px', position: 'relative', transition: 'background 0.3s' }}>
                   <div style={{ width: '22px', height: '22px', background: 'white', borderRadius: '50%', position: 'absolute', top: '3px', left: pushEnabled ? '25px' : '3px', transition: 'left 0.3s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
-                </button>
+                </div>
               </div>
 
             </div>
@@ -290,7 +297,7 @@ export default function App() {
         )}
       </div>
 
-      {/* NOVA NAVBAR HORIZONTAL SCROLLÁVEL - A MAGIA ESTÁ AQUI */}
+      {/* A TUA NOVA NAVBAR HORIZONTAL SCROLLÁVEL */}
       <div style={{
         position: 'fixed', bottom: 0, left: 0, width: '100%', 
         background: 'var(--bg-card)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)',
