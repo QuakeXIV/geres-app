@@ -10,9 +10,11 @@ import Livro from './components/Livro';
 import Estatisticas from './components/Estatisticas';
 import Compras from './components/Compras';
 import Arena from './components/Arena';
+import Perfil from './components/Perfil';
+import Descobrir from './components/Descobrir';
 import TutorialInstalacao from './components/TutorialInstalacao';
 import PermissaoNotificacoes from './components/PermissaoNotificacoes';
-import { Home, Beer, Target, LayoutGrid, LogOut, Sun, BookOpen, BarChart3, ShoppingCart, Camera, Gamepad2, ChevronRight, Bell, BellOff } from 'lucide-react';
+import { Home, Beer, Target, LayoutGrid, LogOut, Sun, BookOpen, BarChart3, ShoppingCart, Camera, Gamepad2, ChevronRight, Bell, BellOff, Map, User } from 'lucide-react';
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -83,6 +85,14 @@ export default function App() {
     }
   }, [session]);
 
+  // Mantém o modo escuro a funcionar ao arrancar a app
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+      document.body.setAttribute('data-theme', 'dark');
+    }
+  }, []);
+
   if (!session) {
     return <Auth />;
   }
@@ -91,15 +101,15 @@ export default function App() {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     gap: isActive ? '6px' : '0', padding: isActive ? '12px 18px' : '12px',
     borderRadius: '24px', background: isActive ? 'var(--accent)' : 'transparent',
-    color: isActive ? 'white' : '#64748b', border: 'none', cursor: 'pointer',
+    color: isActive ? 'white' : 'var(--text-dim)', border: 'none', cursor: 'pointer',
     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', fontWeight: 'bold', fontSize: '14px'
   });
 
   const menuCardStyle = {
-    background: 'white', borderRadius: '16px', padding: '20px 15px',
+    background: 'var(--bg-card)', borderRadius: '16px', padding: '20px 15px',
     display: 'flex', flexDirection: 'column', alignItems: 'center',
     justifyContent: 'center', gap: '10px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
-    border: '1px solid #f1f5f9', cursor: 'pointer', transition: 'transform 0.2s',
+    border: '1px solid var(--border)', cursor: 'pointer', transition: 'transform 0.2s',
     textAlign: 'center', position: 'relative'
   };
 
@@ -130,7 +140,7 @@ export default function App() {
         <div style={{
           position: 'fixed', top: 'calc(60px + env(safe-area-inset-top))', left: '50%', transform: 'translateX(-50%)',
           zIndex: 9999, width: '90%', maxWidth: '400px',
-          background: toast.type === 'error' ? '#334155' : 'var(--accent)',
+          background: toast.type === 'error' ? '#ef4444' : 'var(--accent)',
           color: 'white', padding: '12px 20px', borderRadius: '12px',
           textAlign: 'center', fontWeight: 'bold', boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
         }}>
@@ -142,8 +152,8 @@ export default function App() {
         display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
         paddingTop: 'calc(15px + env(safe-area-inset-top))', paddingBottom: '15px',
         paddingLeft: '20px', paddingRight: '20px', 
-        background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(10px)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.5)', position: 'sticky',
+        background: 'var(--bg-card)', backdropFilter: 'blur(10px)',
+        borderBottom: '1px solid var(--border)', position: 'sticky',
         top: 0, zIndex: 100, boxShadow: '0 4px 15px rgba(0,0,0,0.05)'
       }}>
         <h3 style={{ margin: 0, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -168,22 +178,89 @@ export default function App() {
         {tab === 'compras' && <Compras session={session} />}
         {tab === 'camera' && <DisposableCamera session={session} />}
         {tab === 'arena' && <Arena session={session} />}
+        {tab === 'perfil' && <Perfil session={session} />}
+        {tab === 'descobrir' && <Descobrir />}
         
         {tab === 'menu' && (
           <div style={{ padding: '20px' }}>
-            <h2 style={{ margin: '0 0 20px 0', color: 'var(--text)', fontSize: '24px' }}>Descobrir</h2>
+            <h2 style={{ margin: '0 0 20px 0', color: 'var(--text)', fontSize: '24px' }}>Menu Principal</h2>
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
               
-              {/* CARTÃO DE NOTIFICAÇÕES (AGORA COM VISUAL DINÂMICO) */}
+              {/* CARTÃO DO PERFIL */}
+              <div style={menuCardStyle} onClick={() => setTab('perfil')}>
+                <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
+                  <User size={28} color="var(--accent)" />
+                </div>
+                <div>
+                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>O Meu Perfil</h4>
+                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Foto e Definições</p>
+                </div>
+              </div>
+
+              {/* CARTÃO DO DESCOBRIR */}
+              <div style={menuCardStyle} onClick={() => setTab('descobrir')}>
+                <div style={{ background: '#dbeafe', padding: '12px', borderRadius: '50%' }}>
+                  <Map size={28} color="#3b82f6" />
+                </div>
+                <div>
+                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>Descobrir</h4>
+                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Gerês Guia</p>
+                </div>
+              </div>
+
+              {/* CARTÃO DO LIVRO */}
+              <div style={menuCardStyle} onClick={() => setTab('livro')}>
+                <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
+                  <BookOpen size={28} color="var(--accent)" />
+                </div>
+                <div>
+                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>O Livro</h4>
+                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Frases míticas</p>
+                </div>
+              </div>
+
+              {/* CARTÃO DA CÂMARA */}
+              <div style={menuCardStyle} onClick={() => setTab('camera')}>
+                <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
+                  <Camera size={28} color="var(--accent)" />
+                </div>
+                <div>
+                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>Câmara</h4>
+                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Descartável</p>
+                </div>
+              </div>
+
+              {/* CARTÃO DAS ESTATÍSTICAS */}
+              <div style={menuCardStyle} onClick={() => setTab('stats')}>
+                <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
+                  <BarChart3 size={28} color="var(--accent)" />
+                </div>
+                <div>
+                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>Estatísticas</h4>
+                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Gerês Wrapped</p>
+                </div>
+              </div>
+
+              {/* CARTÃO DO RADAR DA FOME */}
+              <div style={menuCardStyle} onClick={() => setTab('compras')}>
+                <div style={{ background: '#dcfce7', padding: '12px', borderRadius: '50%' }}>
+                  <ShoppingCart size={28} color="#10b981" />
+                </div>
+                <div>
+                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>Radar da Fome</h4>
+                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Lista de compras</p>
+                </div>
+              </div>
+
+              {/* CARTÃO DE NOTIFICAÇÕES */}
               <div 
                 style={{ 
                   ...menuCardStyle, 
-                  border: pushEnabled ? '2px solid #22c55e' : '2px solid transparent'
+                  border: pushEnabled ? '2px solid #22c55e' : '2px solid var(--border)'
                 }} 
                 onClick={toggleNotificacoes}
               >
-                {/* Ponto verde/vermelho no canto */}
                 <div style={{
                   position: 'absolute', top: '12px', right: '12px',
                   width: '10px', height: '10px', borderRadius: '50%',
@@ -202,45 +279,6 @@ export default function App() {
                 </div>
               </div>
 
-              <div style={menuCardStyle} onClick={() => setTab('livro')}>
-                <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
-                  <BookOpen size={28} color="var(--accent)" />
-                </div>
-                <div>
-                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>O Livro</h4>
-                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Frases míticas</p>
-                </div>
-              </div>
-
-              <div style={menuCardStyle} onClick={() => setTab('compras')}>
-                <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
-                  <ShoppingCart size={28} color="var(--accent)" />
-                </div>
-                <div>
-                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>Radar da Fome</h4>
-                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Lista de compras</p>
-                </div>
-              </div>
-
-              <div style={menuCardStyle} onClick={() => setTab('stats')}>
-                <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
-                  <BarChart3 size={28} color="var(--accent)" />
-                </div>
-                <div>
-                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>Estatísticas</h4>
-                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Gerês Wrapped</p>
-                </div>
-              </div>
-
-              <div style={menuCardStyle} onClick={() => setTab('camera')}>
-                <div style={{ background: '#ffedd5', padding: '12px', borderRadius: '50%' }}>
-                  <Camera size={28} color="var(--accent)" />
-                </div>
-                <div>
-                  <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: '15px' }}>Câmara</h4>
-                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-dim)' }}>Descartável</p>
-                </div>
-              </div>
             </div>
 
             <h3 style={{ margin: '30px 0 15px 0', color: 'var(--text)', fontSize: '18px' }}>Competição</h3>
@@ -267,10 +305,10 @@ export default function App() {
 
       <div style={{
         position: 'fixed', bottom: 'max(20px, env(safe-area-inset-bottom))', left: '50%', transform: 'translateX(-50%)',
-        width: '92%', maxWidth: '400px', background: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(15px)',
+        width: '92%', maxWidth: '400px', background: 'var(--bg-card)', backdropFilter: 'blur(15px)',
         WebkitBackdropFilter: 'blur(15px)', borderRadius: '30px', boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', 
-        zIndex: 1000, border: '1px solid rgba(255,255,255,0.4)'
+        zIndex: 1000, border: '1px solid var(--border)'
       }}>
         <button style={navItemStyle(tab === 'feed')} onClick={() => setTab('feed')}>
           <Home size={22} />
