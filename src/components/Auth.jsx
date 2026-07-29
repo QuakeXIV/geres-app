@@ -11,10 +11,9 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
-  // Novos estados para a Foto e Notificações no Registo
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
-  const [enablePush, setEnablePush] = useState(true); // Vem ativado por defeito
+  const [enablePush, setEnablePush] = useState(true); 
 
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
@@ -25,7 +24,6 @@ export default function Auth() {
     }, 4000);
   }
 
-  // Lida com a pré-visualização da foto escolhida
   function handleAvatarChange(e) {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -45,7 +43,21 @@ export default function Auth() {
         return;
       }
 
-      // 1. Criar a conta no Supabase
+      // 🚨 A GRANDE CORREÇÃO: Disparar o pop-up IMEDIATAMENTE após o clique!
+      // Não podemos fazer esperas (awaits) na base de dados antes disto, senão o browser bloqueia.
+      if (enablePush) {
+        try {
+          if (OneSignal.Slidedown) {
+            OneSignal.Slidedown.promptPush(); // Dispara sem "await" para não atrasar o resto
+          } else if (OneSignal.Notifications) {
+            OneSignal.Notifications.requestPermission();
+          }
+        } catch (err) {
+          console.log("Erro a disparar pop-up:", err);
+        }
+      }
+
+      // 1. Criar a conta no Supabase (acontece enquanto o user olha para o pop-up)
       const { data, error } = await supabase.auth.signUp({ email, password });
       
       if (error) {
@@ -57,7 +69,7 @@ export default function Auth() {
       if (data?.user) {
         let finalAvatarUrl = null;
 
-        // 2. Se a pessoa escolheu foto, fazemos logo o Upload
+        // 2. Upload da foto
         if (avatarFile) {
           showToast('A guardar a tua foto...', 'success');
           const fileExt = avatarFile.name.split('.').pop();
@@ -71,33 +83,27 @@ export default function Auth() {
           }
         }
 
-        // 3. Registar o Perfil com o Nome e a Foto (se existir)
+        // 3. Gravar perfil
         await supabase.from('profiles').insert([{ 
           id: data.user.id, 
           username: username,
           avatar_url: finalAvatarUrl 
         }]);
 
-        // 4. A CORREÇÃO: Ligar ao OneSignal e associar ID ANTES de pedir permissões!
+        // 4. Agora que já temos o ID do utilizador, dizemos ao OneSignal de quem é este telemóvel
         if (enablePush) {
           try {
-            // Regista o ID do utilizador no OneSignal instantaneamente
             if (OneSignal.login) await OneSignal.login(data.user.id);
+            
             if (OneSignal.User) {
               OneSignal.User.addTag("app_user_id", data.user.id);
+              await OneSignal.User.PushSubscription.optIn();
             } else {
               OneSignal.sendTag("app_user_id", data.user.id);
-            }
-
-            // Agora sim, lança o pop-up
-            if (OneSignal.Slidedown) await OneSignal.Slidedown.promptPush();
-            if (OneSignal.User && OneSignal.User.PushSubscription) {
-               await OneSignal.User.PushSubscription.optIn();
-            } else if (OneSignal.isPushNotificationsEnabled) {
-               await OneSignal.setSubscription(true);
+              if (OneSignal.setSubscription) await OneSignal.setSubscription(true);
             }
           } catch (err) {
-            console.log("Erro ao ativar notificações no registo:", err);
+            console.log("Erro ao registar ID no OneSignal:", err);
           }
         }
 
@@ -135,11 +141,9 @@ export default function Auth() {
       
       <form onSubmit={handleAuth}>
         
-        {/* CAMPOS EXCLUSIVOS DO REGISTO */}
         {isSignUp && (
           <div style={{ animation: 'slideDown 0.3s ease-out' }}>
             
-            {/* 1. UPLOAD DE FOTO */}
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '15px' }}>
               <label style={{ position: 'relative', cursor: 'pointer' }}>
                 <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--input-bg)', border: '2px dashed var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
@@ -156,7 +160,6 @@ export default function Auth() {
               </label>
             </div>
 
-            {/* 2. NOME DE UTILIZADOR */}
             <input
               className="input-field"
               type="text"
@@ -166,7 +169,6 @@ export default function Auth() {
               required={isSignUp}
             />
 
-            {/* 3. TOGGLE DE NOTIFICAÇÕES */}
             <div 
               onClick={() => setEnablePush(!enablePush)}
               style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--input-bg)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)', cursor: 'pointer', margin: '10px 0' }}
@@ -229,7 +231,7 @@ export default function Auth() {
           style={{ color: 'var(--accent)', cursor: 'pointer', fontWeight: 'bold' }}
           onClick={() => {
             setIsSignUp(!isSignUp);
-            setToast({ show: false, message: '', type: '' }); // Limpa avisos
+            setToast({ show: false, message: '', type: '' });
           }}
         >
           {isSignUp ? 'Fazer Login' : 'Registar aqui'}
