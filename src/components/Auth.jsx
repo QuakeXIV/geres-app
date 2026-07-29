@@ -78,9 +78,18 @@ export default function Auth() {
           avatar_url: finalAvatarUrl 
         }]);
 
-        // 4. Pedir notificações se a pessoa deixou o "Toggle" ligado
+        // 4. A CORREÇÃO: Ligar ao OneSignal e associar ID ANTES de pedir permissões!
         if (enablePush) {
           try {
+            // Regista o ID do utilizador no OneSignal instantaneamente
+            if (OneSignal.login) await OneSignal.login(data.user.id);
+            if (OneSignal.User) {
+              OneSignal.User.addTag("app_user_id", data.user.id);
+            } else {
+              OneSignal.sendTag("app_user_id", data.user.id);
+            }
+
+            // Agora sim, lança o pop-up
             if (OneSignal.Slidedown) await OneSignal.Slidedown.promptPush();
             if (OneSignal.User && OneSignal.User.PushSubscription) {
                await OneSignal.User.PushSubscription.optIn();
@@ -94,8 +103,6 @@ export default function Auth() {
 
         showToast('Conta criada com sucesso! 🚀', 'success');
         
-        // Se a app não fizer login automático (depende da config do teu Supabase), 
-        // limpamos o formulário e mandamos para o ecrã de entrar.
         setIsSignUp(false);
         setAvatarFile(null);
         setAvatarPreview(null);
