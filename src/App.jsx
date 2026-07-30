@@ -28,6 +28,8 @@ export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const oneSignalInitRef = useRef(false);
+  const [isOneSignalReady, setIsOneSignalReady] = useState(false); // NOVO ESTADO DE SEGURANÇA
+  
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [pushEnabled, setPushEnabled] = useState(false);
 
@@ -66,7 +68,7 @@ export default function App() {
     }
   }
 
-  // 1. INICIAR O ONESIGNAL SEMPRE (Mesmo sem sessão ativa, para o Registo funcionar)
+  // 1. INICIAR O ONESIGNAL SEMPRE (Garantindo que termina antes de avançar)
   useEffect(() => {
     if (oneSignalInitRef.current) return;
     oneSignalInitRef.current = true; 
@@ -79,13 +81,8 @@ export default function App() {
           notifyButton: { enable: false }, 
         });
         
-        // Verifica se já estava ativo antes
-        if (OneSignal.User && OneSignal.User.PushSubscription) {
-          setPushEnabled(OneSignal.User.PushSubscription.optedIn);
-        } else if (OneSignal.isPushNotificationsEnabled) {
-          const isEnabled = await OneSignal.isPushNotificationsEnabled();
-          setPushEnabled(isEnabled);
-        }
+        setIsOneSignalReady(true); // Só agora é que abrimos a "porta" para o Login
+        
       } catch (error) { 
         console.error("Erro crítico na inicialização do OneSignal:", error); 
       }
@@ -93,14 +90,18 @@ export default function App() {
     setupOneSignal();
   }, []);
 
-  // 2. ASSOCIAR O UTILIZADOR E A TAG (Só acontece quando a sessão existe)
+  // 2. ASSOCIAR O UTILIZADOR E A TAG (Só avança se houver sessão E o OneSignal já estiver Ready)
   useEffect(() => {
-    if (session?.user?.id) {
+    if (isOneSignalReady && session?.user?.id) {
       try {
-        if (OneSignal.login) OneSignal.login(session.user.id);
+        OneSignal.login(session.user.id);
         
         if (OneSignal.User) {
           OneSignal.User.addTag("app_user_id", session.user.id);
+          
+          if (OneSignal.User.PushSubscription) {
+            setPushEnabled(OneSignal.User.PushSubscription.optedIn);
+          }
         } else {
           OneSignal.sendTag("app_user_id", session.user.id);
         }
@@ -108,7 +109,7 @@ export default function App() {
         console.error("Erro a associar a Tag do utilizador:", err);
       }
     }
-  }, [session]);
+  }, [isOneSignalReady, session]);
 
   if (!session) return <Auth />;
 

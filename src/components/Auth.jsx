@@ -43,21 +43,18 @@ export default function Auth() {
         return;
       }
 
-      // 🚨 A GRANDE CORREÇÃO: Disparar o pop-up IMEDIATAMENTE após o clique!
-      // Não podemos fazer esperas (awaits) na base de dados antes disto, senão o browser bloqueia.
+      // 🚨 Dispara o pop-up nativo se o user deixar o sino ativado
       if (enablePush) {
         try {
           if (OneSignal.Slidedown) {
-            OneSignal.Slidedown.promptPush(); // Dispara sem "await" para não atrasar o resto
-          } else if (OneSignal.Notifications) {
-            OneSignal.Notifications.requestPermission();
+            OneSignal.Slidedown.promptPush(); 
           }
         } catch (err) {
           console.log("Erro a disparar pop-up:", err);
         }
       }
 
-      // 1. Criar a conta no Supabase (acontece enquanto o user olha para o pop-up)
+      // 1. Criar a conta no Supabase
       const { data, error } = await supabase.auth.signUp({ email, password });
       
       if (error) {
@@ -90,23 +87,8 @@ export default function Auth() {
           avatar_url: finalAvatarUrl 
         }]);
 
-        // 4. Agora que já temos o ID do utilizador, dizemos ao OneSignal de quem é este telemóvel
-        if (enablePush) {
-          try {
-            if (OneSignal.login) await OneSignal.login(data.user.id);
-            
-            if (OneSignal.User) {
-              OneSignal.User.addTag("app_user_id", data.user.id);
-              await OneSignal.User.PushSubscription.optIn();
-            } else {
-              OneSignal.sendTag("app_user_id", data.user.id);
-              if (OneSignal.setSubscription) await OneSignal.setSubscription(true);
-            }
-          } catch (err) {
-            console.log("Erro ao registar ID no OneSignal:", err);
-          }
-        }
-
+        // O App.jsx agora trata de associar a tag e fazer o OneSignal.login automaticamente.
+        
         showToast('Conta criada com sucesso! 🚀', 'success');
         
         setIsSignUp(false);
@@ -114,7 +96,6 @@ export default function Auth() {
         setAvatarPreview(null);
       }
     } else {
-      // LÓGICA DE LOGIN NORMAL
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         showToast(error.message, 'error');
