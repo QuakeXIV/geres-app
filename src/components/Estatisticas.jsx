@@ -155,7 +155,7 @@ export default function Estatisticas() {
       
       {/* BOTÃO DE REFRESH MANUAL NO TOPO */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
-        <button onClick={() => calcularWrapped(false)} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #e2e8f0', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+        <button onClick={() => calcularWrapped(false)} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
           <RefreshCw size={16} /> {isRefreshing ? 'A atualizar...' : 'Atualizar Stats'}
         </button>
       </div>
@@ -168,25 +168,25 @@ export default function Estatisticas() {
         <p style={{ margin: 0, fontSize: '14px', opacity: 0.9, position: 'relative' }}>A verdade crua e nua da nossa viagem.</p>
       </div>
 
-      <div className="card" style={{ background: '#f8fafc', border: '2px solid #e2e8f0' }}>
-        <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', color: '#475569', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Zap size={20} color="#64748b" /> Números do Grupo
+      <div className="card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+        <h3 style={{ margin: '0 0 15px 0', fontSize: '18px', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Zap size={20} color="var(--text-dim)" /> Números do Grupo
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-          <div style={{ background: 'white', padding: '15px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 2px 5px rgba(0,0,0,0.02)' }}>
+          <div style={{ background: 'var(--input-bg)', padding: '15px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 2px 5px rgba(0,0,0,0.02)' }}>
             <span style={{ fontSize: '30px', display: 'block', marginBottom: '5px' }}>🍻</span>
             <h4 style={{ margin: 0, fontSize: '24px', color: 'var(--accent)' }}>{stats.totalBebidas}</h4>
             <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-dim)', fontWeight: 'bold' }}>BEBIDAS TOTAIS</p>
           </div>
-          <div style={{ background: 'white', padding: '15px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 2px 5px rgba(0,0,0,0.02)' }}>
+          <div style={{ background: 'var(--input-bg)', padding: '15px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 2px 5px rgba(0,0,0,0.02)' }}>
             <span style={{ fontSize: '30px', display: 'block', marginBottom: '5px' }}>⚔️</span>
             <h4 style={{ margin: 0, fontSize: '24px', color: '#3b82f6' }}>{stats.totalMissoes}</h4>
             <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-dim)', fontWeight: 'bold' }}>MISSÕES FEITAS</p>
           </div>
         </div>
         
-        <div style={{ background: 'white', padding: '15px', borderRadius: '12px', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '15px', boxShadow: '0 2px 5px rgba(0,0,0,0.02)' }}>
-          <div style={{ background: '#ffedd5', padding: '10px', borderRadius: '50%' }}>
+        <div style={{ background: 'var(--input-bg)', padding: '15px', borderRadius: '12px', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '15px', boxShadow: '0 2px 5px rgba(0,0,0,0.02)' }}>
+          <div style={{ background: 'rgba(249, 115, 22, 0.1)', padding: '10px', borderRadius: '50%' }}>
             <Flame size={24} color="var(--accent)" />
           </div>
           <div>
