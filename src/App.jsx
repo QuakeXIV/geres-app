@@ -90,19 +90,18 @@ export default function App() {
     setupOneSignal();
   }, []);
 
-  // 2. ASSOCIAR O UTILIZADOR E A TAG (Só avança se houver sessão E o OneSignal já estiver Ready)
+
   useEffect(() => {
     if (isOneSignalReady && session?.user?.id) {
       try {
-        OneSignal.login(session.user.id);
-        
+        // Removido o OneSignal.login que causava o Erro "ye is undefined"
         if (OneSignal.User) {
-          OneSignal.User.addTag("app_user_id", session.user.id);
+          OneSignal.User.addTag("app_user_id", session.user.id); // Basta isto para o teu backend encontrar o telemóvel!
           
           if (OneSignal.User.PushSubscription) {
             setPushEnabled(OneSignal.User.PushSubscription.optedIn);
           }
-        } else {
+        } else if (OneSignal.sendTag) {
           OneSignal.sendTag("app_user_id", session.user.id);
         }
       } catch (err) {

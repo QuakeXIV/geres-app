@@ -44,15 +44,21 @@ export default function Auth() {
       }
 
       // 🚨 Dispara o pop-up nativo se o user deixar o sino ativado
-      if (enablePush) {
-        try {
-          if (OneSignal.Slidedown) {
-            OneSignal.Slidedown.promptPush(); 
+     // 4. Agora que já temos o ID do utilizador, colocamos a TAG no OneSignal
+        if (enablePush) {
+          try {
+            // Removido o OneSignal.login que crashava o registo
+            if (OneSignal.User) {
+              OneSignal.User.addTag("app_user_id", data.user.id);
+              if (OneSignal.User.PushSubscription) await OneSignal.User.PushSubscription.optIn();
+            } else if (OneSignal.sendTag) {
+              OneSignal.sendTag("app_user_id", data.user.id);
+              if (OneSignal.setSubscription) await OneSignal.setSubscription(true);
+            }
+          } catch (err) {
+            console.log("Erro ao registar TAG no OneSignal:", err);
           }
-        } catch (err) {
-          console.log("Erro a disparar pop-up:", err);
         }
-      }
 
       // 1. Criar a conta no Supabase
       const { data, error } = await supabase.auth.signUp({ email, password });
