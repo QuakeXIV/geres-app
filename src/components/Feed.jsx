@@ -74,6 +74,7 @@ export default function Feed({ session }) {
     setIsRefreshing(false);
   }
 
+  // 🚨 ATENÇÃO: Se o teu ficheiro backend não se chamar "notify.js", altera a rota '/api/notify' abaixo!
   async function notificarDono(action, targetUserId) {
     try {
       const { data: profile } = await supabase
@@ -84,8 +85,8 @@ export default function Feed({ session }) {
         
       const actorName = profile?.username || 'Alguém';
 
-      // LINK ABSOLUTO PARA A VERCEL (Não falha)
-      await fetch('https://geres-app.vercel.app/api/notify', {
+      // CAMINHO RELATIVO: Resolve problemas de CORS e links errados
+      const res = await fetch('/api/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -95,6 +96,10 @@ export default function Feed({ session }) {
           actingId: session.user.id
         })
       });
+
+      if (!res.ok) {
+        console.error("Erro na Vercel ao enviar push:", await res.text());
+      }
     } catch (err) {
       console.log("Erro a notificar:", err);
     }
@@ -138,10 +143,10 @@ export default function Feed({ session }) {
 
       if (dbError) throw new Error(`Erro BD: ${dbError.message}`);
 
-      // AVISA A MALTA PELO NOME DE QUEM PUBLICOU O POST
+      // AVISA A MALTA PELO NOME DE QUEM PUBLICOU O POST (Usando caminho relativo)
       try {
         const { data: profile } = await supabase.from('profiles').select('username').eq('id', session.user.id).single();
-        await fetch('https://geres-app.vercel.app/api/notify', {
+        const res = await fetch('/api/notify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -150,6 +155,10 @@ export default function Feed({ session }) {
             actingId: session.user.id
           })
         });
+
+        if (!res.ok) {
+          console.error("Erro na Vercel ao avisar novo post:", await res.text());
+        }
       } catch (err) {
         console.log("Erro a notificar:", err);
       }
