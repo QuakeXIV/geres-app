@@ -7,7 +7,6 @@ export default function DisposableCamera({ session }) {
   const [uploading, setUploading] = useState(false);
   const [revealedPosts, setRevealedPosts] = useState([]);
   
-  // O estado do nosso toast bonito
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   function showToast(message, type = 'success') {
@@ -58,9 +57,19 @@ export default function DisposableCamera({ session }) {
       await supabase.storage.from('media').upload(filePath, file);
       const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(filePath);
 
-      const amanhaMeioDia = new Date();
-      amanhaMeioDia.setDate(amanhaMeioDia.getDate() + 1);
-      amanhaMeioDia.setHours(10, 0, 0, 0);
+      // --- A MAGIA DAS NOITADAS ESTÁ AQUI ---
+      const dataAtual = new Date();
+      const dataRevelacao = new Date();
+
+      // Se a foto for tirada de madrugada (antes das 6h da manhã)...
+      if (dataAtual.getHours() < 6) {
+        // ...revela HOJE mesmo ao meio-dia (quando a malta acordar)
+        dataRevelacao.setHours(12, 0, 0, 0);
+      } else {
+        // Se for tirada durante o dia/tarde/noite, revela AMANHÃ ao meio-dia
+        dataRevelacao.setDate(dataRevelacao.getDate() + 1);
+        dataRevelacao.setHours(12, 0, 0, 0);
+      }
 
       const { error } = await supabase.from('posts').insert([{
         user_id: session.user.id,
@@ -68,13 +77,14 @@ export default function DisposableCamera({ session }) {
         media_type: 'image',
         caption: '📸 Foto Descartável de Ontem',
         is_disposable: true,
-        reveal_at: amanhaMeioDia.toISOString()
+        reveal_at: dataRevelacao.toISOString()
       }]);
+      // ----------------------------------------
 
       if (error) throw error;
 
       setFile(null);
-      showToast('Foto guardada na película! Só será revelada amanhã às 12:00. 🔒', 'success');
+      showToast('Foto guardada na película! Só será revelada às 12:00. 🔒', 'success');
     } catch (err) {
       showToast(`Erro ao guardar: ${err.message}`, 'error');
     } finally {
@@ -85,7 +95,6 @@ export default function DisposableCamera({ session }) {
   return (
     <div style={{ padding: '10px' }}>
       
-      {/* RENDERIZAÇÃO DO TOAST */}
       {toast.show && (
         <div className={`custom-toast ${toast.type === 'error' ? 'toast-error' : 'toast-success'}`} style={{ position: 'fixed', top: 'calc(80px + env(safe-area-inset-top))', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, width: '90%', maxWidth: '400px' }}>
           {toast.message}
@@ -117,12 +126,12 @@ export default function DisposableCamera({ session }) {
       </div>
 
       <div className="card">
-        <h3 style={{ margin: '0 0 15px 0', fontSize: '18px' }}>🖼️ Fotos Reveladas de Ontem</h3>
+        <h3 style={{ margin: '0 0 15px 0', fontSize: '18px' }}>🖼️ Fotos Reveladas</h3>
         {revealedPosts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '20px', background: 'var(--input-bg)', borderRadius: '12px', border: '1px dashed var(--border)' }}>
             <span style={{ fontSize: '30px', display: 'block', marginBottom: '10px' }}>🎞️</span>
             <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-dim)' }}>
-              Nenhuma foto revelada ainda. Volta amanhã às 12:00!
+              Nenhuma foto revelada ainda. Volta às 12:00!
             </p>
           </div>
         ) : (
