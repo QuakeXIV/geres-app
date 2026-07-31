@@ -28,7 +28,7 @@ export default async function handler(req, res) {
   let targetUserId = null; 
 
   // 1. LÓGICA DO CRON (Câmara Descartável às 12:00)
-  if (req.query.tipo === 'camara') {
+  if (req.query && req.query.tipo === 'camara') {
     title = "As fotos foram reveladas! 📸";
     message = "Corre para a Câmara Descartável para ver as figuras de ontem à noite!";
     targetTab = "camera";
@@ -59,57 +59,63 @@ export default async function handler(req, res) {
   } 
   
   // 2. LÓGICA DIRETA DA APP (FRONTEND) COM NOMES REAIS
-  else if (req.body && req.body.action) {
-    // Adicionei o postOwnerName aqui na desestruturação para o apanhar do Feed.jsx
-    const { action, actorName, targetId, actingId, votosFaltam, extraInfo, postOwnerName } = req.body;
-    actingUserId = actingId;
-    targetUserId = targetId;
+  else if (req.body) {
+    // 🛡️ SEGURANÇA EXTRA: Garante que o body é sempre interpretado como JSON, mesmo que a Vercel se passe
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    
+    if (body && body.action) {
+      const { action, actorName, targetId, actingId, votosFaltam, extraInfo, postOwnerName } = body;
+      
+      actingUserId = actingId;
+      targetUserId = targetId;
 
-    if (action === 'new_post') {
-      title = "Temos conteúdo novo! 🍺";
-      message = `${actorName} acabou de publicar no feed, vai cuscar!`;
-      targetTab = "feed";
-    } else if (action === 'new_story') {
-      title = "Novo Story! 📸";
-      message = `${actorName} adicionou um story novo. Desaparece em 24h!`;
-      targetTab = "feed";
-    } else if (action === 'mention') {
-      title = "Foste apanhado! 🎯";
-      message = `${actorName} mencionou-te numa publicação! Vai ver o que disseram de ti.`;
-      targetTab = "feed";
-    } else if (action === 'like') {
-      title = "Novo Like! ❤️";
-      message = `${actorName} curtiu a tua publicação!`;
-      targetTab = "feed";
-    } else if (action === 'comment') {
-      title = "Novo Comentário! 💬";
-      message = `${actorName} comentou a tua publicação!`;
-      targetTab = "feed";
-    } else if (action === 'reply') {
-      // NOVA LÓGICA DE RESPOSTA INSERIDA AQUI
-      title = "Responderam-te! 💬";
-      message = `${actorName} respondeu-te na publicação de ${postOwnerName || 'alguém'}`;
-      targetTab = "feed";
-    } else if (action === 'mission_approval') {
-      targetTab = "missoes";
-      if (votosFaltam === 0) {
-        title = "Missão Concluída! ✅";
-        message = `${actorName} deu o último voto. Missão aprovada e 1 ponto para ti!`;
+      if (action === 'new_post') {
+        title = "Temos conteúdo novo! 🍺";
+        message = `${actorName} acabou de publicar no feed, vai cuscar!`;
+        targetTab = "feed";
+      } else if (action === 'new_story') {
+        title = "Novo Story! 📸";
+        message = `${actorName} adicionou um story novo. Desaparece em 24h!`;
+        targetTab = "feed";
+      } else if (action === 'mention') {
+        title = "Foste apanhado! 🎯";
+        message = `${actorName} mencionou-te numa publicação! Vai ver o que disseram de ti.`;
+        targetTab = "feed";
+      } else if (action === 'like') {
+        title = "Novo Like! ❤️";
+        message = `${actorName} curtiu a tua publicação!`;
+        targetTab = "feed";
+      } else if (action === 'comment') {
+        title = "Novo Comentário! 💬";
+        message = `${actorName} comentou a tua publicação!`;
+        targetTab = "feed";
+      } else if (action === 'reply') {
+        title = "Responderam-te! 💬";
+        message = `${actorName} respondeu-te na publicação de ${postOwnerName || 'alguém'}`;
+        targetTab = "feed";
+      } else if (action === 'mission_approval') {
+        targetTab = "missoes";
+        if (votosFaltam === 0) {
+          title = "Missão Concluída! ✅";
+          message = `${actorName} deu o último voto. Missão aprovada e 1 ponto para ti!`;
+        } else {
+          title = "Novo Voto no Tribunal ⚖️";
+          message = `${actorName} aprovou a tua missão. Faltam ${votosFaltam} votos!`;
+        }
+      } else if (action === 'new_quote') {
+        title = "Nova pérola no Livro! 📖";
+        message = `${actorName} eternizou uma barbaridade dita por ${extraInfo}!`;
+        targetTab = "livro";
       } else {
-        title = "Novo Voto no Tribunal ⚖️";
-        message = `${actorName} aprovou a tua missão. Faltam ${votosFaltam} votos!`;
+        return res.status(200).json({ message: 'Ação ignorada' });
       }
-    } else if (action === 'new_quote') {
-      title = "Nova pérola no Livro! 📖";
-      message = `${actorName} eternizou uma barbaridade dita por ${extraInfo}!`;
-      targetTab = "livro";
     } else {
-      return res.status(200).json({ message: 'Ação ignorada' });
+      return res.status(400).json({ error: 'Pedido inválido, sem action declarada' });
     }
   } 
   
   else {
-    return res.status(400).json({ error: 'Pedido inválido' });
+    return res.status(400).json({ error: 'Pedido totalmente inválido' });
   }
 
   // 3. DISPARAR PARA O ONESIGNAL
