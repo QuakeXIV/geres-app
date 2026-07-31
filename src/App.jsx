@@ -68,7 +68,7 @@ export default function App() {
     }
   }
 
-  // 1. INICIAR O ONESIGNAL SEMPRE (Garantindo que termina antes de avançar)
+// 1. INICIAR O ONESIGNAL SEMPRE (Com Desfibrilhador de 2 segundos)
   useEffect(() => {
     if (oneSignalInitRef.current) return;
     oneSignalInitRef.current = true; 
@@ -87,7 +87,14 @@ export default function App() {
         console.error("Erro crítico na inicialização do OneSignal:", error); 
       }
     }
-    setupOneSignal();
+    
+    // A MAGIA ACONTECE AQUI: 
+    // Em vez de arrancar logo, o OneSignal espera 2000 milissegundos (2 segundos).
+    // Isto dá tempo ao iOS de estabilizar a PWA na memória antes de injetar as notificações.
+    setTimeout(() => {
+      setupOneSignal();
+    }, 2000);
+    
   }, []);
 
 
