@@ -36,7 +36,11 @@ export default function Feed({ session }) {
   const [commentText, setCommentText] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isStoryMode, setIsStoryMode] = useState(false);
+  
+  // --- ESTADOS DOS MODAIS DE APAGAR ---
   const [postToDelete, setPostToDelete] = useState(null);
+  const [storyToDelete, setStoryToDelete] = useState(null);
+  const [commentToDelete, setCommentToDelete] = useState(null);
 
   const [editingPostId, setEditingPostId] = useState(null);
   const [editCaptionText, setEditCaptionText] = useState('');
@@ -481,13 +485,14 @@ export default function Feed({ session }) {
     if (currentStoryIndex > 0) setCurrentStoryIndex(prev => prev - 1);
   }
 
+  // --- LÓGICA MESTRE DE APAGAR POSTS, STORIES E COMENTÁRIOS ---
   function pedirParaApagar(postId) {
     setPostToDelete(postId);
   }
 
   async function confirmarApagarPost() {
-    const postId = postToDelete;
-    const { error } = await supabase.from('posts').delete().eq('id', postId);
+    if (!postToDelete) return;
+    const { error } = await supabase.from('posts').delete().eq('id', postToDelete);
 
     if (error) {
       showToast(`Erro ao apagar: ${error.message}`, 'error');
@@ -498,18 +503,38 @@ export default function Feed({ session }) {
     }
   }
 
-  async function apagarStory(storyId) {
-    const confirmacao = window.confirm("Tens a certeza que queres apagar este story?");
-    if (!confirmacao) return;
+  function pedirParaApagarStory(storyId) {
+    setStoryToDelete(storyId);
+  }
 
-    const { error } = await supabase.from('stories').delete().eq('id', storyId);
+  async function confirmarApagarStory() {
+    if (!storyToDelete) return;
+    const { error } = await supabase.from('stories').delete().eq('id', storyToDelete);
 
     if (error) {
       showToast(`Erro ao apagar: ${error.message}`, 'error');
     } else {
       showToast('Story apagado! 🗑️', 'success');
+      setStoryToDelete(null);
       setActiveStoryUser(null);
       carregarStories();
+    }
+  }
+
+  function pedirParaApagarComentario(commentId) {
+    setCommentToDelete(commentId);
+  }
+
+  async function confirmarApagarComentario() {
+    if (!commentToDelete) return;
+    const { error } = await supabase.from('comments').delete().eq('id', commentToDelete);
+
+    if (error) {
+      showToast(`Erro ao apagar: ${error.message}`, 'error');
+    } else {
+      showToast('Comentário apagado! 🗑️', 'success');
+      setCommentToDelete(null);
+      carregarPosts();
     }
   }
 
@@ -524,21 +549,6 @@ export default function Feed({ session }) {
     } else {
       showToast('Legenda atualizada! ✏️', 'success');
       setEditingPostId(null);
-      carregarPosts();
-    }
-  }
-
-  // --- LÓGICA DE EDITAR E APAGAR COMENTÁRIOS ---
-  async function apagarComentario(commentId) {
-    const confirmacao = window.confirm("Queres mesmo apagar este comentário?");
-    if (!confirmacao) return;
-
-    const { error } = await supabase.from('comments').delete().eq('id', commentId);
-
-    if (error) {
-      showToast(`Erro ao apagar: ${error.message}`, 'error');
-    } else {
-      showToast('Comentário apagado! 🗑️', 'success');
       carregarPosts();
     }
   }
@@ -616,7 +626,7 @@ export default function Feed({ session }) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            action: 'reply', // <-- Nova action no backend!
+            action: 'reply', 
             actorName: actorName,
             targetId: replyState.targetUserId,
             actingId: session.user.id,
@@ -1118,7 +1128,7 @@ export default function Feed({ session }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
               {activeStoryUser.userId === session.user.id && (
                 <button 
-                  onClick={() => apagarStory(activeStoryUser.items[currentStoryIndex].id)} 
+                  onClick={() => pedirParaApagarStory(activeStoryUser.items[currentStoryIndex].id)} 
                   style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '5px' }}
                 >
                   <Trash2 size={24} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />
@@ -1455,7 +1465,7 @@ export default function Feed({ session }) {
                                     Editar
                                   </span>
                                   <span 
-                                    onClick={() => apagarComentario(c.id)} 
+                                    onClick={() => pedirParaApagarComentario(c.id)} 
                                     style={{ fontSize: '11px', color: '#ef4444', fontWeight: 'bold', cursor: 'pointer' }}
                                   >
                                     Apagar
@@ -1537,7 +1547,9 @@ export default function Feed({ session }) {
         <Plus size={32} />
       </button>
 
-      {/* MODAL DE CONFIRMAÇÃO PARA APAGAR POSTS */}
+      {/* ----------------- MODAIS DE APAGAR (BEM FORMATADOS) ----------------- */}
+
+      {/* MODAL DE APAGAR POST */}
       {postToDelete && (
         <div style={{ 
           position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', 
@@ -1574,6 +1586,106 @@ export default function Feed({ session }) {
               </button>
               <button 
                 onClick={confirmarApagarPost} 
+                style={{ 
+                  flex: 1, padding: '12px', borderRadius: '10px', border: 'none', 
+                  background: '#ef4444', color: 'white', fontWeight: 'bold', 
+                  cursor: 'pointer', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.3)' 
+                }}
+              >
+                Sim, Apagar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE APAGAR STORY (NOTA O Z-INDEX 10001 PARA FICAR EM CIMA DO STORY VIEWER) */}
+      {storyToDelete && (
+        <div style={{ 
+          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', 
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 10001, 
+          display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px', 
+          boxSizing: 'border-box', margin: 0 
+        }}>
+          <div style={{ 
+            width: '100%', maxWidth: '320px', textAlign: 'center', 
+            background: 'var(--bg-card)', borderRadius: '20px', padding: '25px 20px', 
+            boxShadow: '0 10px 25px rgba(0,0,0,0.3)', boxSizing: 'border-box' 
+          }}>
+            <div style={{ 
+              background: '#fee2e2', width: '50px', height: '50px', borderRadius: '50%', 
+              display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px auto' 
+            }}>
+              <Trash2 size={24} color="#ef4444" />
+            </div>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '20px', color: 'var(--text)' }}>
+              Apagar Story?
+            </h3>
+            <p style={{ color: 'var(--text-dim)', fontSize: '14px', margin: '0 0 20px 0' }}> 
+              Este story vai ser apagado permanentemente. Tens a certeza?
+            </p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button 
+                onClick={() => setStoryToDelete(null)} 
+                style={{ 
+                  flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', 
+                  background: 'var(--input-bg)', color: 'var(--text)', fontWeight: 'bold', cursor: 'pointer' 
+                }}
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={confirmarApagarStory} 
+                style={{ 
+                  flex: 1, padding: '12px', borderRadius: '10px', border: 'none', 
+                  background: '#ef4444', color: 'white', fontWeight: 'bold', 
+                  cursor: 'pointer', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.3)' 
+                }}
+              >
+                Sim, Apagar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE APAGAR COMENTÁRIO */}
+      {commentToDelete && (
+        <div style={{ 
+          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', 
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 9999, 
+          display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px', 
+          boxSizing: 'border-box', margin: 0 
+        }}>
+          <div style={{ 
+            width: '100%', maxWidth: '320px', textAlign: 'center', 
+            background: 'var(--bg-card)', borderRadius: '20px', padding: '25px 20px', 
+            boxShadow: '0 10px 25px rgba(0,0,0,0.3)', boxSizing: 'border-box' 
+          }}>
+            <div style={{ 
+              background: '#fee2e2', width: '50px', height: '50px', borderRadius: '50%', 
+              display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px auto' 
+            }}>
+              <Trash2 size={24} color="#ef4444" />
+            </div>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '20px', color: 'var(--text)' }}>
+              Apagar Comentário?
+            </h3>
+            <p style={{ color: 'var(--text-dim)', fontSize: '14px', margin: '0 0 20px 0' }}> 
+              Este comentário vai desaparecer. Tens a certeza?
+            </p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button 
+                onClick={() => setCommentToDelete(null)} 
+                style={{ 
+                  flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', 
+                  background: 'var(--input-bg)', color: 'var(--text)', fontWeight: 'bold', cursor: 'pointer' 
+                }}
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={confirmarApagarComentario} 
                 style={{ 
                   flex: 1, padding: '12px', borderRadius: '10px', border: 'none', 
                   background: '#ef4444', color: 'white', fontWeight: 'bold', 
