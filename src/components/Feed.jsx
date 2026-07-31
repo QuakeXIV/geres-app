@@ -405,12 +405,12 @@ export default function Feed({ session }) {
           const todosVistos = group.items.every(story => seenStories.includes(story.id));
           
           // Se já viu tudo fica argola cinzenta. Se não, fica laranja!
-          const corArgola = todosVistos ? 'rgba(255, 255, 255, 0.15)' : 'linear-gradient(45deg, #f97316, #fbbf24)';
+          const corArgola = todosVistos ? 'var(--text-dim)' : 'linear-gradient(45deg, #f97316, #fbbf24)';
           const opacidadeNome = todosVistos ? 0.5 : 1;
 
           return (
             <div key={group.userId} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '70px', cursor: 'pointer' }} onClick={() => abrirStory(group)}>
-              <div style={{ width: '64px', height: '64px', borderRadius: '50%', padding: '2px', background: corArgola, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: '64px', height: '64px', borderRadius: '50%', padding: '3px', background: corArgola, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: 'var(--bg-card)', border: '2px solid var(--bg-card)' }}>
                   {group.avatar ? (
                     <img src={group.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
