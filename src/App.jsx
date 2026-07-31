@@ -278,7 +278,15 @@ export default function App() {
         
         <div style={{ width: '40px', display: 'flex', justifyContent: 'flex-end' }}>
           <div 
-            onClick={() => setIsMenuOpen(true)}
+            onClick={() => {
+              if (tab !== 'feed') setTab('feed');
+              setTimeout(() => {
+                // A magia que avisa o Feed para abrir o teu perfil
+                window.dispatchEvent(new CustomEvent('openMyProfile', { 
+                  detail: { id: session.user.id, username, avatar_url: avatarUrl } 
+                }));
+              }, 100);
+            }}
             style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid var(--border)', overflow: 'hidden', background: 'var(--bg-main)', cursor: 'pointer', transition: 'border 0.3s' }}
           >
             {avatarUrl ? <img src={avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <User size={20} color="var(--text-dim)" style={{ margin: '6px' }} />}

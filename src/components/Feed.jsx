@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Heart, Send, Plus, X, Trash2, Edit2, Check, RefreshCw, User, Camera, Filter, Search, ArrowLeft } from 'lucide-react';
+import { 
+  Heart, Send, Plus, X, Trash2, Edit2, 
+  Check, RefreshCw, User, Camera, Filter, 
+  Search, ArrowLeft, Save 
+} from 'lucide-react';
 
 function formatarTempo(dataIso) {
   if (!dataIso) return '';
@@ -57,9 +61,12 @@ export default function Feed({ session }) {
   const [mentionStartIndex, setMentionStartIndex] = useState(0);
   const [activeCommentPostId, setActiveCommentPostId] = useState(null);
 
-  // --- NOVOS ESTADOS: PESQUISA E PERFIL ---
+  // --- ESTADOS: PESQUISA, PERFIL E EDIÇÃO DE PERFIL ---
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingProfile, setViewingProfile] = useState(null);
+  
+  const [uploadingProfile, setUploadingProfile] = useState(false);
+  const [editUsernameText, setEditUsernameText] = useState('');
 
   // --- ESTADO: FILTRO DO FEED ---
   const [filterType, setFilterType] = useState('recentes');
@@ -69,8 +76,24 @@ export default function Feed({ session }) {
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 4000);
   }
 
+  // Atualiza o input de texto do nome quando mudas de perfil
   useEffect(() => {
-    // Carrega os vistos da memória do telemóvel ao abrir
+    if (viewingProfile) {
+      setEditUsernameText(viewingProfile.username || '');
+    }
+  }, [viewingProfile]);
+
+  // Listener Mágico para abrir o "Meu Perfil" vindo de fora (App.jsx)
+  useEffect(() => {
+    const handleOpenProfile = (e) => {
+      setViewingProfile(e.detail);
+      window.scrollTo(0,0);
+    };
+    window.addEventListener('openMyProfile', handleOpenProfile);
+    return () => window.removeEventListener('openMyProfile', handleOpenProfile);
+  }, []);
+
+  useEffect(() => {
     const vistosGuardados = localStorage.getItem('seenStories_geres');
     if (vistosGuardados) {
       setSeenStories(JSON.parse(vistosGuardados));
@@ -93,12 +116,11 @@ export default function Feed({ session }) {
     };
   }, []);
 
-  // Marca o story como visto automaticamente mal aparece no ecrã
   useEffect(() => {
     if (activeStoryUser && activeStoryUser.items[currentStoryIndex]) {
       const storyAtualId = activeStoryUser.items[currentStoryIndex].id;
       setSeenStories(prev => {
-        if (prev.includes(storyAtualId)) return prev; // já estava visto
+        if (prev.includes(storyAtualId)) return prev;
         const novosVistos = [...prev, storyAtualId];
         localStorage.setItem('seenStories_geres', JSON.stringify(novosVistos));
         return novosVistos;
@@ -108,7 +130,11 @@ export default function Feed({ session }) {
 
   async function carregarTudo() {
     setIsRefreshing(true);
-    await Promise.all([carregarPosts(), carregarStories(), carregarTodosUsuarios()]);
+    await Promise.all([
+      carregarPosts(), 
+      carregarStories(), 
+      carregarTodosUsuarios()
+    ]);
     setIsRefreshing(false);
   }
 
@@ -116,10 +142,7 @@ export default function Feed({ session }) {
     const { data } = await supabase
       .from('profiles')
       .select('id, username, avatar_url');
-      
-    if (data) {
-      setAllUsers(data);
-    }
+    if (data) setAllUsers(data);
   }
 
   async function carregarPosts() {
@@ -139,7 +162,7 @@ export default function Feed({ session }) {
       .from('stories')
       .select('*, profiles(username, avatar_url)')
       .gt('created_at', limite24h)
-      .order('created_at', { ascending: true }); // Os mais antigos primeiro na lista para o carrossel
+      .order('created_at', { ascending: true }); 
 
     if (!error && data) {
       const grupos = {};
@@ -167,12 +190,69 @@ export default function Feed({ session }) {
     }
   }
 
+  // --- LÓGICA DE EDIÇÃO DO PRÓPRIO PERFIL ---
+  async function atualizarFotoPerfil(event) {
+    try {
+      setUploadingProfile(true);
+      if (!event.target.files || event.target.files.length === 0) {
+        throw new Error('Escolhe uma imagem.');
+      }
+      
+      const file = event.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const filePath = `avatars/${session.user.id}-${Math.random()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('media')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(filePath);
+      
+      await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', session.user.id);
+      
+      setViewingProfile({ ...viewingProfile, avatar_url: publicUrl });
+      
+      // Avisa a Navbar/Header para atualizar a foto lá em cima!
+      window.dispatchEvent(new Event('perfilAtualizado')); 
+      carregarTudo();
+      showToast('Foto de perfil atualizada! 📸', 'success');
+
+    } catch (error) {
+      showToast(`Erro: ${error.message}`, 'error');
+    } finally {
+      setUploadingProfile(false);
+    }
+  }
+
+  async function guardarNomePerfil() {
+    if (!editUsernameText.trim()) return;
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update({ username: editUsernameText })
+      .eq('id', session.user.id);
+    
+    if (error) {
+      showToast(error.message, 'error');
+    } else {
+      setViewingProfile({ ...viewingProfile, username: editUsernameText });
+      // Avisa a Navbar/Header
+      window.dispatchEvent(new Event('perfilAtualizado')); 
+      carregarTudo();
+      showToast('Nome guardado com sucesso! ✍️', 'success');
+    }
+  }
+
   // --- LÓGICA DE AUTO-COMPLETE DE MENÇÕES (MODAL POST/STORY) ---
   function handleCaptionChange(e) {
     const value = e.target.value;
     setCaption(value);
 
-    // Detetar se estamos a escrever uma menção
     const cursor = e.target.selectionStart;
     const textBeforeCursor = value.slice(0, cursor);
     const words = textBeforeCursor.split(/\s/);
@@ -239,14 +319,13 @@ export default function Feed({ session }) {
     setActiveCommentPostId(null);
   }
 
-  // --- DETETOR DE MENÇÕES PARA NOTIFICAR (BACKEND) ---
   const extrairMencoes = (texto) => {
     if (!texto) return [];
     const regex = /@([a-zA-Z0-9_]+)/g;
     const mencoes = [];
     let match;
     while ((match = regex.exec(texto)) !== null) {
-      mencoes.push(match[1]); // Guarda só o nome
+      mencoes.push(match[1]); 
     }
     return [...new Set(mencoes)];
   };
@@ -265,7 +344,12 @@ export default function Feed({ session }) {
         await fetch('/api/notify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'mention', actorName, targetId: u.id, actingId: session.user.id })
+          body: JSON.stringify({ 
+            action: 'mention', 
+            actorName, 
+            targetId: u.id, 
+            actingId: session.user.id 
+          })
         });
       }
     }
@@ -284,11 +368,11 @@ export default function Feed({ session }) {
       const res = await fetch('/api/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: action,
-          actorName: actorName,
-          targetId: targetUserId,
-          actingId: session.user.id
+        body: JSON.stringify({ 
+          action: action, 
+          actorName: actorName, 
+          targetId: targetUserId, 
+          actingId: session.user.id 
         })
       });
 
@@ -329,11 +413,11 @@ export default function Feed({ session }) {
       const isVideo = file.type.startsWith('video') || fileExt.match(/(mp4|mov|webm|avi)$/i);
 
       if (isStoryMode) {
-        const { error: dbError } = await supabase.from('stories').insert([{
-          user_id: session.user.id,
-          media_url: publicUrl,
-          media_type: isVideo ? 'video' : 'image',
-          caption
+        const { error: dbError } = await supabase.from('stories').insert([{ 
+          user_id: session.user.id, 
+          media_url: publicUrl, 
+          media_type: isVideo ? 'video' : 'image', 
+          caption 
         }]);
 
         if (dbError) throw new Error(`Erro BD: ${dbError.message}`);
@@ -343,12 +427,12 @@ export default function Feed({ session }) {
         showToast('Story adicionado com sucesso! 📸', 'success');
 
       } else {
-        const { error: dbError } = await supabase.from('posts').insert([{
-          user_id: session.user.id,
-          media_url: publicUrl,
-          media_type: isVideo ? 'video' : 'image',
-          caption,
-          is_disposable: false
+        const { error: dbError } = await supabase.from('posts').insert([{ 
+          user_id: session.user.id, 
+          media_url: publicUrl, 
+          media_type: isVideo ? 'video' : 'image', 
+          caption, 
+          is_disposable: false 
         }]);
 
         if (dbError) throw new Error(`Erro BD: ${dbError.message}`);
@@ -370,7 +454,6 @@ export default function Feed({ session }) {
     }
   }
 
-  // Lógica de navegação de Stories
   function abrirStory(userGroup) {
     setActiveStoryUser(userGroup);
     setCurrentStoryIndex(0);
@@ -385,9 +468,7 @@ export default function Feed({ session }) {
   }
 
   function prevStory() {
-    if (currentStoryIndex > 0) {
-      setCurrentStoryIndex(prev => prev - 1);
-    }
+    if (currentStoryIndex > 0) setCurrentStoryIndex(prev => prev - 1);
   }
 
   function pedirParaApagar(postId) {
@@ -437,7 +518,6 @@ export default function Feed({ session }) {
     }
   }
 
-  // --- LÓGICA DE EDITAR E APAGAR COMENTÁRIOS ---
   async function apagarComentario(commentId) {
     const confirmacao = window.confirm("Queres mesmo apagar este comentário?");
     if (!confirmacao) return;
@@ -484,9 +564,7 @@ export default function Feed({ session }) {
       await supabase.from('likes').delete().eq('post_id', postId).eq('user_id', session.user.id);
     } else {
       await supabase.from('likes').insert([{ post_id: postId, user_id: session.user.id }]);
-      if (postOwnerId !== session.user.id) {
-        notificarAcao('like', postOwnerId);
-      }
+      if (postOwnerId !== session.user.id) notificarAcao('like', postOwnerId);
     }
     carregarPosts();
   }
@@ -495,10 +573,10 @@ export default function Feed({ session }) {
     const texto = commentText[postId];
     if (!texto) return;
 
-    await supabase.from('comments').insert([{
-      post_id: postId,
-      user_id: session.user.id,
-      content: texto
+    await supabase.from('comments').insert([{ 
+      post_id: postId, 
+      user_id: session.user.id, 
+      content: texto 
     }]);
 
     setCommentText({ ...commentText, [postId]: '' });
@@ -512,92 +590,189 @@ export default function Feed({ session }) {
 
   // --- LÓGICA DE FILTRAGEM DO FEED ---
   const postsFiltrados = [...posts].filter(post => {
-    if (filterType === 'meus') {
-      return post.user_id === session.user.id;
-    }
+    if (filterType === 'meus') return post.user_id === session.user.id;
     return true;
   }).sort((a, b) => {
-    if (filterType === 'populares') {
-      return (b.likes?.length || 0) - (a.likes?.length || 0);
-    }
-    if (filterType === 'antigos') {
-      return new Date(a.created_at) - new Date(b.created_at);
-    }
-    // recentes (default)
+    if (filterType === 'populares') return (b.likes?.length || 0) - (a.likes?.length || 0);
+    if (filterType === 'antigos') return new Date(a.created_at) - new Date(b.created_at);
     return new Date(b.created_at) - new Date(a.created_at); 
   });
 
-  // --- LÓGICA DE VISUALIZAÇÃO DE PERFIL E OS SEUS POSTS ---
+  // --- LÓGICA DE VISUALIZAÇÃO DE PERFIL ---
   const postsToDisplay = viewingProfile 
     ? [...posts].filter(p => p.user_id === viewingProfile.id).sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     : postsFiltrados;
 
-  // Variáveis para a argola de Story na Página de Perfil
-  const profileStoryGroup = viewingProfile ? groupedStories.find(g => g.userId === viewingProfile.id) : null;
+  const profileStoryGroup = viewingProfile 
+    ? groupedStories.find(g => g.userId === viewingProfile.id) 
+    : null;
+    
   const profileHasStories = !!profileStoryGroup;
+  
   const profileAllStoriesSeen = profileHasStories && profileStoryGroup.items.every(story => seenStories.includes(story.id));
-  const profileRingColor = profileAllStoriesSeen ? 'rgba(255, 255, 255, 0.15)' : 'linear-gradient(45deg, #f97316, #fbbf24)';
+  
+  const profileRingColor = profileAllStoriesSeen 
+    ? 'rgba(255, 255, 255, 0.15)' 
+    : 'linear-gradient(45deg, #f97316, #fbbf24)';
+  
+  const isMyProfile = viewingProfile?.id === session.user.id;
 
   return (
     <div style={{ padding: '10px', paddingBottom: 'calc(130px + env(safe-area-inset-bottom))' }}>
 
+      {/* TOAST DE NOTIFICAÇÕES */}
       {toast.show && (
-        <div
-          className={`custom-toast ${toast.type === 'error' ? 'toast-error' : 'toast-success'}`}
-          style={{ position: 'fixed', top: 'calc(60px + env(safe-area-inset-top))', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, width: '90%', maxWidth: '400px', boxShadow: '0 4px 15px rgba(0,0,0,0.3)' }}
+        <div 
+          className={`custom-toast ${toast.type === 'error' ? 'toast-error' : 'toast-success'}`} 
+          style={{ 
+            position: 'fixed', 
+            top: 'calc(60px + env(safe-area-inset-top))', 
+            left: '50%', 
+            transform: 'translateX(-50%)', 
+            zIndex: 9999, 
+            width: '90%', 
+            maxWidth: '400px', 
+            boxShadow: '0 4px 15px rgba(0,0,0,0.3)' 
+          }}
         >
           {toast.message}
         </div>
       )}
 
       {/* BARRA SUPERIOR: TÍTULO E REFRESH */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-        <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: '15px' 
+      }}>
+        <h2 style={{ 
+          margin: 0, 
+          fontSize: '20px', 
+          color: 'var(--text)', 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '8px' 
+        }}>
           {viewingProfile ? 'Perfil' : 'Feed'}
         </h2>
         <button 
           onClick={carregarTudo} 
           disabled={isRefreshing} 
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '6px', 
+            background: 'var(--bg-card)', 
+            border: '1px solid var(--border)', 
+            padding: '6px 12px', 
+            borderRadius: '20px', 
+            color: 'var(--accent)', 
+            fontWeight: 'bold', 
+            cursor: 'pointer', 
+            boxShadow: '0 2px 5px rgba(0,0,0,0.05)' 
+          }}
         >
           <RefreshCw size={14} className={isRefreshing ? "spin" : ""} /> 
           {isRefreshing ? 'A atualizar...' : 'Atualizar'}
         </button>
       </div>
 
-      {/* BARRA DE PESQUISA (SÓ APARECE NO FEED) */}
+      {/* BARRA DE PESQUISA (SÓ NO FEED GERAL) */}
       {!viewingProfile && (
         <div style={{ position: 'relative', marginBottom: '15px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', background: 'var(--input-bg)', borderRadius: '12px', padding: '0 12px', border: '1px solid var(--border)' }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            background: 'var(--input-bg)', 
+            borderRadius: '12px', 
+            padding: '0 12px', 
+            border: '1px solid var(--border)' 
+          }}>
             <Search size={18} color="var(--text-dim)" />
             <input 
               type="text" 
               placeholder="Pesquisar utilizador..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ background: 'transparent', border: 'none', color: 'var(--text)', padding: '12px', width: '100%', outline: 'none', fontSize: '14px' }}
+              value={searchQuery} 
+              onChange={(e) => setSearchQuery(e.target.value)} 
+              style={{ 
+                background: 'transparent', 
+                border: 'none', 
+                color: 'var(--text)', 
+                padding: '12px', 
+                width: '100%', 
+                outline: 'none', 
+                fontSize: '14px' 
+              }} 
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', padding: '0', display: 'flex', cursor: 'pointer' }}>
+              <button 
+                onClick={() => setSearchQuery('')} 
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  padding: '0', 
+                  display: 'flex', 
+                  cursor: 'pointer' 
+                }}
+              >
                 <X size={18} color="var(--text-dim)" />
               </button>
             )}
           </div>
           
-          {/* RESULTADOS DA PESQUISA */}
           {searchQuery && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', maxHeight: '200px', overflowY: 'auto', zIndex: 50, marginTop: '5px', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}>
+            <div style={{ 
+              position: 'absolute', 
+              top: '100%', 
+              left: 0, 
+              width: '100%', 
+              background: 'var(--bg-card)', 
+              border: '1px solid var(--border)', 
+              borderRadius: '12px', 
+              maxHeight: '200px', 
+              overflowY: 'auto', 
+              zIndex: 50, 
+              marginTop: '5px', 
+              boxShadow: '0 4px 15px rgba(0,0,0,0.2)' 
+            }}>
               {allUsers.filter(u => u.username?.toLowerCase().includes(searchQuery.toLowerCase())).length > 0 ? (
                 allUsers.filter(u => u.username?.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (
-                  <div key={u.id} onClick={() => { setViewingProfile(u); setSearchQuery(''); window.scrollTo(0,0); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}>
-                    <div style={{ width: '30px', height: '30px', borderRadius: '50%', overflow: 'hidden', background: 'var(--input-bg)' }}>
+                  <div 
+                    key={u.id} 
+                    onClick={() => { 
+                      setViewingProfile(u); 
+                      setSearchQuery(''); 
+                      window.scrollTo(0,0); 
+                    }} 
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '10px', 
+                      padding: '12px', 
+                      borderBottom: '1px solid var(--border)', 
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    <div style={{ 
+                      width: '30px', 
+                      height: '30px', 
+                      borderRadius: '50%', 
+                      overflow: 'hidden', 
+                      background: 'var(--input-bg)' 
+                    }}>
                       {u.avatar_url ? (
-                        <img src={u.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img 
+                          src={u.avatar_url} 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        />
                       ) : (
                         <User size={16} color="var(--text-dim)" style={{ margin: '7px' }} />
                       )}
                     </div>
-                    <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>{u.username}</span>
+                    <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>
+                      {u.username}
+                    </span>
                   </div>
                 ))
               ) : (
@@ -610,63 +785,210 @@ export default function Feed({ session }) {
         </div>
       )}
 
-      {/* CABEÇALHO DA PÁGINA DE PERFIL (SÓ APARECE SE ALGUÉM FOI SELECIONADO) */}
+      {/* CABEÇALHO DA PÁGINA DE PERFIL */}
       {viewingProfile && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'var(--bg-card)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border)', marginBottom: '15px', position: 'relative' }}>
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          background: 'var(--bg-card)', 
+          padding: '20px', 
+          borderRadius: '16px', 
+          border: '1px solid var(--border)', 
+          marginBottom: '15px', 
+          position: 'relative' 
+        }}>
           <button 
             onClick={() => { setViewingProfile(null); window.scrollTo(0,0); }} 
-            style={{ position: 'absolute', top: '15px', left: '15px', background: 'var(--input-bg)', border: 'none', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+            style={{ 
+              position: 'absolute', 
+              top: '15px', 
+              left: '15px', 
+              background: 'var(--input-bg)', 
+              border: 'none', 
+              borderRadius: '50%', 
+              width: '36px', 
+              height: '36px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              cursor: 'pointer' 
+            }}
           >
             <ArrowLeft size={20} color="var(--text)" />
           </button>
           
-          <div 
-            style={{ cursor: profileHasStories ? 'pointer' : 'default' }} 
-            onClick={() => profileHasStories && abrirStory(profileStoryGroup)}
-          >
-            <div style={{ width: '80px', height: '80px', borderRadius: '50%', padding: '3px', background: profileHasStories ? profileRingColor : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: 'var(--bg-card)', border: '2px solid var(--bg-card)' }}>
-                {viewingProfile.avatar_url ? (
-                  <img src={viewingProfile.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <User size={32} color="var(--text-dim)" style={{ margin: '22px' }} />
-                )}
+          <div style={{ position: 'relative' }}>
+            <div 
+              style={{ cursor: profileHasStories ? 'pointer' : 'default' }} 
+              onClick={() => profileHasStories && abrirStory(profileStoryGroup)}
+            >
+              <div style={{ 
+                width: '80px', 
+                height: '80px', 
+                borderRadius: '50%', 
+                padding: '3px', 
+                background: profileHasStories ? profileRingColor : 'transparent', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center' 
+              }}>
+                <div style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  borderRadius: '50%', 
+                  overflow: 'hidden', 
+                  background: 'var(--bg-card)', 
+                  border: '2px solid var(--bg-card)' 
+                }}>
+                  {viewingProfile.avatar_url ? (
+                    <img 
+                      src={viewingProfile.avatar_url} 
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                    />
+                  ) : (
+                    <User size={32} color="var(--text-dim)" style={{ margin: '22px' }} />
+                  )}
+                </div>
               </div>
             </div>
+
+            {/* ÍCONE DA CÂMARA SE FOR O TEU PERFIL */}
+            {isMyProfile && (
+              <label style={{ 
+                position: 'absolute', 
+                bottom: '0', 
+                right: '0', 
+                background: 'var(--accent)', 
+                color: 'white', 
+                width: '28px', 
+                height: '28px', 
+                borderRadius: '50%', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                cursor: 'pointer', 
+                border: '2px solid var(--bg-card)' 
+              }}>
+                <Camera size={14} />
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={atualizarFotoPerfil} 
+                  disabled={uploadingProfile} 
+                  style={{ display: 'none' }} 
+                />
+              </label>
+            )}
           </div>
-          <h3 style={{ margin: '10px 0 0 0', color: 'var(--text)', fontSize: '18px' }}>@{viewingProfile.username}</h3>
-          <p style={{ margin: '5px 0 0 0', color: 'var(--text-dim)', fontSize: '14px' }}>{postsToDisplay.length} publicações</p>
+          
+          {/* INPUT PARA EDITAR O NOME SE FOR O TEU PERFIL */}
+          {isMyProfile ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '15px' }}>
+              <input 
+                type="text" 
+                value={editUsernameText} 
+                onChange={(e) => setEditUsernameText(e.target.value)} 
+                placeholder="O teu nome"
+                style={{ 
+                  background: 'transparent', 
+                  border: 'none', 
+                  fontSize: '20px', 
+                  fontWeight: 'bold', 
+                  color: 'var(--text)', 
+                  textAlign: 'center', 
+                  outline: 'none', 
+                  borderBottom: '1px dashed var(--border)', 
+                  paddingBottom: '5px', 
+                  width: '150px' 
+                }}
+              />
+              <button 
+                onClick={guardarNomePerfil} 
+                style={{ 
+                  marginTop: '10px', 
+                  background: 'var(--input-bg)', 
+                  border: '1px solid var(--border)', 
+                  color: 'var(--text)', 
+                  padding: '6px 16px', 
+                  borderRadius: '20px', 
+                  fontSize: '13px', 
+                  fontWeight: 'bold', 
+                  cursor: 'pointer', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '6px' 
+                }}
+              >
+                <Save size={14} /> Guardar Nome
+              </button>
+            </div>
+          ) : (
+            <h3 style={{ margin: '10px 0 0 0', color: 'var(--text)', fontSize: '18px' }}>
+              @{viewingProfile.username}
+            </h3>
+          )}
+
+          <p style={{ margin: '10px 0 0 0', color: 'var(--text-dim)', fontSize: '14px' }}>
+            {postsToDisplay.length} publicações
+          </p>
         </div>
       )}
 
-      {/* BARRA DE STORIES ESTILO INSTAGRAM (SÓ APARECE NO FEED) */}
+      {/* BARRA DE STORIES ESTILO INSTAGRAM (SÓ NO FEED) */}
       {!viewingProfile && (
-        <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '15px', marginBottom: '15px', borderBottom: '1px solid var(--border)' }}>
-
-          {/* BOTÃO ADICIONAR STORY */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '70px', cursor: 'pointer' }} onClick={() => { setIsStoryMode(true); setIsModalOpen(true); }}>
-            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--input-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed var(--text-dim)', position: 'relative' }}>
+        <div style={{ 
+          display: 'flex', 
+          gap: '15px', 
+          overflowX: 'auto', 
+          paddingBottom: '15px', 
+          marginBottom: '15px', 
+          borderBottom: '1px solid var(--border)' 
+        }}>
+          <div 
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '70px', cursor: 'pointer' }} 
+            onClick={() => { setIsStoryMode(true); setIsModalOpen(true); }}
+          >
+            <div style={{ 
+              width: '64px', height: '64px', borderRadius: '50%', 
+              background: 'var(--input-bg)', display: 'flex', alignItems: 'center', 
+              justifyContent: 'center', border: '2px dashed var(--text-dim)', position: 'relative' 
+            }}>
               <Plus size={24} color="var(--text-dim)" />
-              <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', background: 'var(--accent)', borderRadius: '50%', border: '2px solid var(--bg-card)', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ 
+                position: 'absolute', bottom: '-2px', right: '-2px', 
+                background: 'var(--accent)', borderRadius: '50%', 
+                border: '2px solid var(--bg-card)', width: '22px', height: '22px', 
+                display: 'flex', alignItems: 'center', justifyContent: 'center' 
+              }}>
                 <Plus size={14} color="white" />
               </div>
             </div>
-            <span style={{ fontSize: '12px', color: 'var(--text-dim)', marginTop: '5px' }}>O Teu Story</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-dim)', marginTop: '5px' }}>
+              O Teu Story
+            </span>
           </div>
 
-          {/* LISTA DE STORIES ATIVOS */}
           {groupedStories.map(group => {
-            // Verifica se TODOS os stories desta pessoa já foram vistos
             const todosVistos = group.items.every(story => seenStories.includes(story.id));
-            
-            // Se já viu tudo fica argola cinzenta. Se não, fica laranja!
             const corArgola = todosVistos ? 'rgba(255, 255, 255, 0.15)' : 'linear-gradient(45deg, #f97316, #fbbf24)';
             const opacidadeNome = todosVistos ? 0.5 : 1;
 
             return (
-              <div key={group.userId} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '70px', cursor: 'pointer' }} onClick={() => abrirStory(group)}>
-                <div style={{ width: '64px', height: '64px', borderRadius: '50%', padding: '3px', background: corArgola, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: 'var(--bg-card)', border: '2px solid var(--bg-card)' }}>
+              <div 
+                key={group.userId} 
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '70px', cursor: 'pointer' }} 
+                onClick={() => abrirStory(group)}
+              >
+                <div style={{ 
+                  width: '64px', height: '64px', borderRadius: '50%', 
+                  padding: '3px', background: corArgola, display: 'flex', 
+                  alignItems: 'center', justifyContent: 'center' 
+                }}>
+                  <div style={{ 
+                    width: '100%', height: '100%', borderRadius: '50%', 
+                    overflow: 'hidden', background: 'var(--bg-card)', border: '2px solid var(--bg-card)' 
+                  }}>
                     {group.avatar ? (
                       <img src={group.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
@@ -676,7 +998,10 @@ export default function Feed({ session }) {
                     )}
                   </div>
                 </div>
-                <span style={{ fontSize: '12px', color: 'var(--text)', opacity: opacidadeNome, marginTop: '5px', fontWeight: group.userId === session.user.id ? 'bold' : 'normal' }}>
+                <span style={{ 
+                  fontSize: '12px', color: 'var(--text)', opacity: opacidadeNome, 
+                  marginTop: '5px', fontWeight: group.userId === session.user.id ? 'bold' : 'normal' 
+                }}>
                   {group.userId === session.user.id ? 'Tu' : group.username}
                 </span>
               </div>
@@ -687,66 +1012,100 @@ export default function Feed({ session }) {
 
       {/* STORY VIEWER (FULLSCREEN) */}
       {activeStoryUser && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'black', zIndex: 10000, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ 
+          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', 
+          background: 'black', zIndex: 10000, display: 'flex', flexDirection: 'column' 
+        }}>
           
-          {/* 1. BARRA DE PROGRESSO TIPO INSTA */}
-          <div style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top) + 10px)', left: '10px', right: '10px', display: 'flex', gap: '4px', zIndex: 20 }}>
+          <div style={{ 
+            position: 'absolute', top: 'calc(env(safe-area-inset-top) + 10px)', 
+            left: '10px', right: '10px', display: 'flex', gap: '4px', zIndex: 20 
+          }}>
             {activeStoryUser.items.map((_, idx) => (
-              <div key={idx} style={{ flex: 1, height: '3px', background: 'rgba(255,255,255,0.3)', borderRadius: '2px', overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%',
-                  background: 'white',
-                  // Preenche 100% se já passou ou é o atual, 0% se ainda não chegou
-                  width: idx <= currentStoryIndex ? '100%' : '0%',
-                  transition: 'width 0.2s ease-in-out'
+              <div key={idx} style={{ 
+                flex: 1, height: '3px', background: 'rgba(255,255,255,0.3)', 
+                borderRadius: '2px', overflow: 'hidden' 
+              }}>
+                <div style={{ 
+                  height: '100%', background: 'white', 
+                  width: idx <= currentStoryIndex ? '100%' : '0%', 
+                  transition: 'width 0.2s ease-in-out' 
                 }}></div>
               </div>
             ))}
           </div>
 
-          {/* 2. CABEÇALHO DO STORY */}
-          <div style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top) + 15px)', left: 0, width: '100%', padding: '0 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10, boxSizing: 'border-box' }}>
+          <div style={{ 
+            position: 'absolute', top: 'calc(env(safe-area-inset-top) + 15px)', 
+            left: 0, width: '100%', padding: '0 15px', display: 'flex', 
+            justifyContent: 'space-between', alignItems: 'center', zIndex: 10, boxSizing: 'border-box' 
+          }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '50%', overflow: 'hidden', border: '1px solid white' }}>
-                {activeStoryUser.avatar ? <img src={activeStoryUser.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/> : <User color="white"/>}
+              <div style={{ 
+                width: '32px', height: '32px', borderRadius: '50%', 
+                overflow: 'hidden', border: '1px solid white' 
+              }}>
+                {activeStoryUser.avatar ? (
+                  <img src={activeStoryUser.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+                ) : (
+                  <User color="white"/>
+                )}
               </div>
-              <span style={{ color: 'white', fontWeight: 'bold', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>@{activeStoryUser.username}</span>
+              <span style={{ color: 'white', fontWeight: 'bold', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+                @{activeStoryUser.username}
+              </span>
               <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
                 {formatarTempo(activeStoryUser.items[currentStoryIndex].created_at)}
               </span>
             </div>
             
-            {/* BOTÕES DE APAGAR E FECHAR */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
               {activeStoryUser.userId === session.user.id && (
-                <button onClick={() => apagarStory(activeStoryUser.items[currentStoryIndex].id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '5px' }}>
+                <button 
+                  onClick={() => apagarStory(activeStoryUser.items[currentStoryIndex].id)} 
+                  style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '5px' }}
+                >
                   <Trash2 size={24} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />
                 </button>
               )}
-              <button onClick={() => setActiveStoryUser(null)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', padding: '5px' }}>
+              <button 
+                onClick={() => setActiveStoryUser(null)} 
+                style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', padding: '5px' }}
+              >
                 <X size={28} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />
               </button>
             </div>
           </div>
 
-          {/* 3. ÁREA DE TOQUE (Esquerda/Direita) */}
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', zIndex: 5 }}>
             <div style={{ flex: 1 }} onClick={prevStory}></div>
             <div style={{ flex: 1 }} onClick={nextStory}></div>
           </div>
 
-          {/* 4. IMAGEM OU VÍDEO */}
           <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
             {activeStoryUser.items[currentStoryIndex].media_type === 'video' ? (
-              <video src={activeStoryUser.items[currentStoryIndex].media_url} autoPlay playsInline loop style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+              <video 
+                src={activeStoryUser.items[currentStoryIndex].media_url} 
+                autoPlay playsInline loop 
+                style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} 
+              />
             ) : (
-              <img src={activeStoryUser.items[currentStoryIndex].media_url} alt="Story" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+              <img 
+                src={activeStoryUser.items[currentStoryIndex].media_url} 
+                alt="Story" 
+                style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} 
+              />
             )}
 
-            {/* 5. LEGENDA */}
             {activeStoryUser.items[currentStoryIndex].caption && (
-              <div style={{ position: 'absolute', bottom: '100px', left: '20px', right: '20px', textAlign: 'center', zIndex: 10 }}>
-                <span style={{ background: 'rgba(0,0,0,0.6)', color: 'white', padding: '8px 16px', borderRadius: '12px', fontSize: '16px', textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
+              <div style={{ 
+                position: 'absolute', bottom: '100px', left: '20px', right: '20px', 
+                textAlign: 'center', zIndex: 10 
+              }}>
+                <span style={{ 
+                  background: 'rgba(0,0,0,0.6)', color: 'white', padding: '8px 16px', 
+                  borderRadius: '12px', fontSize: '16px', textShadow: '0 1px 2px rgba(0,0,0,0.8)' 
+                }}>
                   {activeStoryUser.items[currentStoryIndex].caption}
                 </span>
               </div>
@@ -755,49 +1114,52 @@ export default function Feed({ session }) {
         </div>
       )}
 
-      {/* JANELA DE NOVA PUBLICAÇÃO (MODAL UNIFICADO FEED/STORY) */}
+      {/* JANELA DE NOVA PUBLICAÇÃO */}
       {isModalOpen && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-          background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex',
-          justifyContent: 'center', alignItems: 'center', padding: '20px', boxSizing: 'border-box'
+        <div style={{ 
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', 
+          background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', 
+          justifyContent: 'center', alignItems: 'center', padding: '20px', boxSizing: 'border-box' 
         }}>
           <div className="card" style={{ width: '100%', maxWidth: '400px', margin: 0, position: 'relative' }}>
-            <button
-              onClick={() => setIsModalOpen(false)}
+            <button 
+              onClick={() => setIsModalOpen(false)} 
               style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer' }}
             >
               <X size={24} />
             </button>
 
             <h3 style={{ margin: '0 0 5px 0' }}>{isStoryMode ? '📸 Novo Story' : '🚀 Novo Post'}</h3>
-            <p style={{ margin: '0 0 15px 0', fontSize: '12px', color: 'var(--text-dim)' }}>
-              Usa <strong style={{ color: 'var(--accent)' }}>@nome</strong> para notificar alguém diretamente!
+            <p style={{ margin: '0 0 15px 0', fontSize: '12px', color: 'var(--text-dim)' }}> 
+              Usa <strong style={{ color: 'var(--accent)' }}>@nome</strong> para notificar alguém! 
             </p>
 
             <form onSubmit={publicar}>
-              <input
-                className="input-field"
-                type="file"
-                accept="image/*,video/*"
-                onChange={(e) => setFile(e.target.files[0])}
-                style={{ padding: '10px' }}
+              <input 
+                className="input-field" 
+                type="file" 
+                accept="image/*,video/*" 
+                onChange={(e) => setFile(e.target.files[0])} 
+                style={{ padding: '10px' }} 
               />
               
               <div style={{ position: 'relative' }}>
-                {/* DROPDOWN DE SUGESTÕES (CRIAR POST/STORY) */}
                 {showSuggestions && !activeCommentPostId && mentionSuggestions.length > 0 && (
-                  <div style={{
+                  <div style={{ 
                     position: 'absolute', bottom: '100%', left: 0, width: '100%', 
                     background: 'var(--bg-card)', border: '1px solid var(--border)', 
                     borderRadius: '12px', maxHeight: '150px', overflowY: 'auto', 
-                    zIndex: 10, boxShadow: '0 -4px 10px rgba(0,0,0,0.1)', marginBottom: '5px'
+                    zIndex: 10, boxShadow: '0 -4px 10px rgba(0,0,0,0.1)', marginBottom: '5px' 
                   }}>
                     {mentionSuggestions.map(u => (
-                      <div key={u.id} onClick={() => selecionarMencao(u.username)} style={{
-                        display: 'flex', alignItems: 'center', gap: '10px', padding: '10px',
-                        borderBottom: '1px solid var(--border)', cursor: 'pointer'
-                      }}>
+                      <div 
+                        key={u.id} 
+                        onClick={() => selecionarMencao(u.username)} 
+                        style={{ 
+                          display: 'flex', alignItems: 'center', gap: '10px', 
+                          padding: '10px', borderBottom: '1px solid var(--border)', cursor: 'pointer' 
+                        }}
+                      >
                         <div style={{ width: '24px', height: '24px', borderRadius: '50%', overflow: 'hidden', background: 'var(--input-bg)' }}>
                           {u.avatar_url ? (
                             <img src={u.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -805,22 +1167,28 @@ export default function Feed({ session }) {
                             <User size={16} color="var(--text-dim)" style={{ margin: '4px' }} />
                           )}
                         </div>
-                        <span style={{ color: 'var(--text)', fontWeight: 'bold', fontSize: '14px' }}>{u.username}</span>
+                        <span style={{ color: 'var(--text)', fontWeight: 'bold', fontSize: '14px' }}>
+                          {u.username}
+                        </span>
                       </div>
                     ))}
                   </div>
                 )}
 
-                <input
-                  className="input-field"
-                  type="text"
-                  placeholder={isStoryMode ? "Escreve algo para o story..." : "Escreve uma legenda..."}
-                  value={caption}
-                  onChange={handleCaptionChange}
+                <input 
+                  className="input-field" 
+                  type="text" 
+                  placeholder={isStoryMode ? "Escreve algo para o story..." : "Escreve uma legenda..."} 
+                  value={caption} 
+                  onChange={handleCaptionChange} 
                 />
               </div>
 
-              <button className="btn-primary" disabled={uploading} style={{ background: isStoryMode ? 'linear-gradient(45deg, #f97316, #fbbf24)' : 'var(--accent)' }}>
+              <button 
+                className="btn-primary" 
+                disabled={uploading} 
+                style={{ background: isStoryMode ? 'linear-gradient(45deg, #f97316, #fbbf24)' : 'var(--accent)' }}
+              >
                 {uploading ? 'A enviar... aguarda ⏳' : (isStoryMode ? 'Adicionar ao Story' : 'Publicar no Feed')}
               </button>
             </form>
@@ -828,7 +1196,7 @@ export default function Feed({ session }) {
         </div>
       )}
 
-      {/* BARRA DE FILTRAGEM DO FEED (SÓ APARECE SE NÃO ESTIVER NUM PERFIL) */}
+      {/* BARRA DE FILTRAGEM DO FEED (SÓ NO FEED GERAL) */}
       {!viewingProfile && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
           <h3 style={{ margin: 0, fontSize: '15px', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -836,7 +1204,7 @@ export default function Feed({ session }) {
           </h3>
           <select 
             value={filterType} 
-            onChange={(e) => setFilterType(e.target.value)}
+            onChange={(e) => setFilterType(e.target.value)} 
             style={{ 
               background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)', 
               borderRadius: '10px', padding: '6px 12px', fontSize: '13px', outline: 'none', fontWeight: 'bold', cursor: 'pointer' 
@@ -850,20 +1218,21 @@ export default function Feed({ session }) {
         </div>
       )}
 
-      {/* FEED DE POSTS (MURAL OU PERFIL) */}
+      {/* FEED DE POSTS */}
       {postsToDisplay.length === 0 ? (
-        <div style={{
-          textAlign: 'center', marginTop: '40px', padding: '30px 20px',
-          background: 'var(--bg-card)', borderRadius: '16px',
-          border: '2px dashed var(--accent)', backdropFilter: 'blur(5px)'
+        <div style={{ 
+          textAlign: 'center', marginTop: '40px', padding: '30px 20px', 
+          background: 'var(--bg-card)', borderRadius: '16px', border: '2px dashed var(--accent)', 
+          backdropFilter: 'blur(5px)' 
         }}>
-          <span style={{ fontSize: '45px', display: 'block', marginBottom: '15px' }}>{viewingProfile ? '👀' : '🏜️'}</span>
-          <h3 style={{ color: 'var(--accent)', margin: '0 0 10px 0', fontSize: '22px' }}>Nada por aqui!</h3>
+          <span style={{ fontSize: '45px', display: 'block', marginBottom: '15px' }}>
+            {viewingProfile ? '👀' : '🏜️'}
+          </span>
+          <h3 style={{ color: 'var(--accent)', margin: '0 0 10px 0', fontSize: '22px' }}>
+            Nada por aqui!
+          </h3>
           <p style={{ color: 'var(--text)', margin: 0, fontWeight: '500', fontSize: '15px' }}>
-            {viewingProfile 
-              ? 'Este utilizador ainda não publicou nada no feed.' 
-              : 'Não encontramos publicações. Arranca com a festa!'
-            }
+            {viewingProfile ? 'Este utilizador ainda não publicou nada no feed.' : 'Não encontramos publicações. Arranca com a festa!'}
           </p>
         </div>
       ) : (
@@ -871,19 +1240,24 @@ export default function Feed({ session }) {
           const jaDeuLike = post.likes?.some((l) => l.user_id === session.user.id);
           const eMeuPost = post.user_id === session.user.id;
           const aEditar = editingPostId === post.id;
-
           const avatar = post.profiles?.avatar_url;
 
           return (
             <div key={post.id} className="card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-
-                {/* CABEÇALHO DO POST COM FOTO DE PERFIL (CLICÁVEL PARA ABRIR PERFIL) */}
+                
                 <div 
-                  onClick={() => { setViewingProfile({ id: post.user_id, username: post.profiles?.username, avatar_url: post.profiles?.avatar_url }); window.scrollTo(0,0); }}
+                  onClick={() => { 
+                    setViewingProfile({ id: post.user_id, username: post.profiles?.username, avatar_url: post.profiles?.avatar_url }); 
+                    window.scrollTo(0,0); 
+                  }} 
                   style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
                 >
-                  <div style={{ width: '42px', height: '42px', borderRadius: '50%', overflow: 'hidden', background: 'var(--input-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--accent)' }}>
+                  <div style={{ 
+                    width: '42px', height: '42px', borderRadius: '50%', overflow: 'hidden', 
+                    background: 'var(--input-bg)', display: 'flex', alignItems: 'center', 
+                    justifyContent: 'center', border: '2px solid var(--accent)' 
+                  }}>
                     {avatar ? (
                       <img src={avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
@@ -900,23 +1274,17 @@ export default function Feed({ session }) {
                   </div>
                 </div>
 
-                {/* BOTÕES DE EDITAR E APAGAR */}
                 {eMeuPost && (
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      onClick={() => {
-                        setEditingPostId(post.id);
-                        setEditCaptionText(post.caption || '');
-                      }}
+                    <button 
+                      onClick={() => { setEditingPostId(post.id); setEditCaptionText(post.caption || ''); }} 
                       style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px', cursor: 'pointer' }}
-                      title="Editar legenda"
                     >
                       <Edit2 size={16} color="var(--text-dim)" />
                     </button>
-                    <button
-                      onClick={() => pedirParaApagar(post.id)}
+                    <button 
+                      onClick={() => pedirParaApagar(post.id)} 
                       style={{ background: '#fee2e2', border: 'none', borderRadius: '6px', padding: '6px', cursor: 'pointer' }}
-                      title="Apagar post"
                     >
                       <Trash2 size={16} color="#ef4444" />
                     </button>
@@ -930,46 +1298,48 @@ export default function Feed({ session }) {
                 <img src={post.media_url} alt="Media" style={{ width: '100%', borderRadius: '12px' }} />
               )}
 
-              {/* MODO DE EDIÇÃO DO POST */}
               {aEditar ? (
                 <div style={{ display: 'flex', gap: '8px', margin: '12px 0' }}>
-                  <input
-                    className="input-field"
-                    style={{ margin: 0, padding: '8px 12px', fontSize: '14px' }}
-                    type="text"
-                    value={editCaptionText}
-                    onChange={(e) => setEditCaptionText(e.target.value)}
+                  <input 
+                    className="input-field" 
+                    style={{ margin: 0, padding: '8px 12px', fontSize: '14px' }} 
+                    type="text" 
+                    value={editCaptionText} 
+                    onChange={(e) => setEditCaptionText(e.target.value)} 
                   />
-                  <button
-                    onClick={() => guardarEdicao(post.id)}
+                  <button 
+                    onClick={() => guardarEdicao(post.id)} 
                     style={{ background: 'var(--accent)', border: 'none', borderRadius: '8px', padding: '0 12px', cursor: 'pointer' }}
                   >
                     <Check size={18} color="white" />
                   </button>
-                  <button
-                    onClick={() => setEditingPostId(null)}
+                  <button 
+                    onClick={() => setEditingPostId(null)} 
                     style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0 10px', cursor: 'pointer' }}
                   >
                     <X size={18} color="var(--text-dim)" />
                   </button>
                 </div>
               ) : (
-                <p style={{ margin: '12px 0', color: 'var(--text)', fontSize: '14px' }}>{post.caption}</p>
+                <p style={{ margin: '12px 0', color: 'var(--text)', fontSize: '14px' }}>
+                  {post.caption}
+                </p>
               )}
 
               <div style={{ display: 'flex', alignItems: 'center', margin: '10px 0' }}>
-                <button
-                  style={{ background: 'none', border: 'none', color: jaDeuLike ? '#ef4444' : 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', padding: 0 }}
+                <button 
+                  style={{ background: 'none', border: 'none', color: jaDeuLike ? '#ef4444' : 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', padding: 0 }} 
                   onClick={() => toggleLike(post.id, jaDeuLike, post.user_id)}
                 >
                   <Heart fill={jaDeuLike ? '#ef4444' : 'none'} size={24} />
-                  <span style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--text)' }}>{post.likes?.length || 0}</span>
+                  <span style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--text)' }}>
+                    {post.likes?.length || 0}
+                  </span>
                 </button>
               </div>
 
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '10px' }}>
                 
-                {/* RENDERING DOS COMENTÁRIOS COM EDIÇÃO E REMOÇÃO */}
                 {post.comments?.map((c) => {
                   const eMeuComentario = c.user_id === session.user.id;
                   const aEditarComentario = editingCommentId === c.id;
@@ -978,12 +1348,12 @@ export default function Feed({ session }) {
                     <div key={c.id} style={{ display: 'flex', flexDirection: 'column', margin: '6px 0' }}>
                       {aEditarComentario ? (
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
-                          <input
-                            className="input-field"
-                            style={{ margin: 0, padding: '4px 8px', fontSize: '13px', flex: 1 }}
-                            type="text"
-                            value={editCommentText}
-                            onChange={(e) => setEditCommentText(e.target.value)}
+                          <input 
+                            className="input-field" 
+                            style={{ margin: 0, padding: '4px 8px', fontSize: '13px', flex: 1 }} 
+                            type="text" 
+                            value={editCommentText} 
+                            onChange={(e) => setEditCommentText(e.target.value)} 
                           />
                           <button 
                             onClick={() => guardarEdicaoComentario(c.id)} 
@@ -1002,7 +1372,7 @@ export default function Feed({ session }) {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
                           <p style={{ fontSize: '13px', margin: 0, color: 'var(--text)', flex: 1, wordBreak: 'break-word' }}>
                             <span 
-                              style={{ fontWeight: 'bold', color: 'var(--text)', cursor: 'pointer' }}
+                              style={{ fontWeight: 'bold', color: 'var(--text)', cursor: 'pointer' }} 
                               onClick={() => { setViewingProfile({ id: c.user_id, username: c.profiles?.username, avatar_url: c.profiles?.avatar_url }); window.scrollTo(0,0); }}
                             >
                               @{c.profiles?.username}: 
@@ -1013,15 +1383,13 @@ export default function Feed({ session }) {
                             <div style={{ display: 'flex', gap: '8px' }}>
                               <button 
                                 onClick={() => { setEditingCommentId(c.id); setEditCommentText(c.content); }} 
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }} 
-                                title="Editar comentário"
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                               >
                                 <Edit2 size={12} color="var(--text-dim)" />
                               </button>
                               <button 
                                 onClick={() => apagarComentario(c.id)} 
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }} 
-                                title="Apagar comentário"
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                               >
                                 <Trash2 size={12} color="#ef4444" />
                               </button>
@@ -1034,19 +1402,19 @@ export default function Feed({ session }) {
                 })}
 
                 <div style={{ position: 'relative', marginTop: '12px' }}>
-                  {/* DROPDOWN DE SUGESTÕES (COMENTÁRIOS NO FEED) */}
                   {showSuggestions && activeCommentPostId === post.id && mentionSuggestions.length > 0 && (
-                    <div style={{
-                      position: 'absolute', bottom: '100%', left: 0, width: '100%',
-                      background: 'var(--bg-card)', border: '1px solid var(--border)',
-                      borderRadius: '12px', maxHeight: '150px', overflowY: 'auto',
-                      zIndex: 10, boxShadow: '0 -4px 10px rgba(0,0,0,0.2)', marginBottom: '5px'
+                    <div style={{ 
+                      position: 'absolute', bottom: '100%', left: 0, width: '100%', 
+                      background: 'var(--bg-card)', border: '1px solid var(--border)', 
+                      borderRadius: '12px', maxHeight: '150px', overflowY: 'auto', 
+                      zIndex: 10, boxShadow: '0 -4px 10px rgba(0,0,0,0.2)', marginBottom: '5px' 
                     }}>
                       {mentionSuggestions.map(u => (
-                        <div key={u.id} onClick={() => selecionarMencaoComentario(u.username, post.id)} style={{
-                          display: 'flex', alignItems: 'center', gap: '10px', padding: '10px',
-                          borderBottom: '1px solid var(--border)', cursor: 'pointer'
-                        }}>
+                        <div 
+                          key={u.id} 
+                          onClick={() => selecionarMencaoComentario(u.username, post.id)} 
+                          style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
+                        >
                           <div style={{ width: '24px', height: '24px', borderRadius: '50%', overflow: 'hidden', background: 'var(--input-bg)' }}>
                             {u.avatar_url ? (
                               <img src={u.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -1054,23 +1422,25 @@ export default function Feed({ session }) {
                               <User size={16} color="var(--text-dim)" style={{ margin: '4px' }} />
                             )}
                           </div>
-                          <span style={{ color: 'var(--text)', fontWeight: 'bold', fontSize: '14px' }}>{u.username}</span>
+                          <span style={{ color: 'var(--text)', fontWeight: 'bold', fontSize: '14px' }}>
+                            {u.username}
+                          </span>
                         </div>
                       ))}
                     </div>
                   )}
                   
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <input
-                      className="input-field"
-                      style={{ padding: '8px 12px', fontSize: '14px', margin: 0 }}
-                      type="text"
-                      placeholder="Comentar ou mencionar (@)..."
-                      value={commentText[post.id] || ''}
-                      onChange={(e) => handleCommentChange(e, post.id)}
+                    <input 
+                      className="input-field" 
+                      style={{ padding: '8px 12px', fontSize: '14px', margin: 0 }} 
+                      type="text" 
+                      placeholder="Comentar ou mencionar (@)..." 
+                      value={commentText[post.id] || ''} 
+                      onChange={(e) => handleCommentChange(e, post.id)} 
                     />
-                    <button
-                      style={{ background: 'var(--accent)', border: 'none', borderRadius: '8px', padding: '0 12px', cursor: 'pointer' }}
+                    <button 
+                      style={{ background: 'var(--accent)', border: 'none', borderRadius: '8px', padding: '0 12px', cursor: 'pointer' }} 
                       onClick={() => adicionarComentario(post.id, post.user_id)}
                     >
                       <Send size={18} color="white" />
@@ -1083,15 +1453,15 @@ export default function Feed({ session }) {
         })
       )}
 
-      {/* BOTÃO FLUTUANTE DE "+" PARA FEED */}
-      <button
-        onClick={() => { setIsStoryMode(false); setIsModalOpen(true); }}
-        style={{
-          position: 'fixed', bottom: 'calc(100px + env(safe-area-inset-bottom))', right: '20px', width: '60px', height: '60px',
-          background: 'var(--accent)', color: 'white', borderRadius: '50%',
-          display: 'flex', justifyContent: 'center', alignItems: 'center',
-          border: 'none', boxShadow: '0 4px 15px rgba(249, 115, 22, 0.5)',
-          cursor: 'pointer', zIndex: 90
+      {/* BOTÃO FLUTUANTE DE "+" */}
+      <button 
+        onClick={() => { setIsStoryMode(false); setIsModalOpen(true); }} 
+        style={{ 
+          position: 'fixed', bottom: 'calc(100px + env(safe-area-inset-bottom))', 
+          right: '20px', width: '60px', height: '60px', background: 'var(--accent)', 
+          color: 'white', borderRadius: '50%', display: 'flex', justifyContent: 'center', 
+          alignItems: 'center', border: 'none', boxShadow: '0 4px 15px rgba(249, 115, 22, 0.5)', 
+          cursor: 'pointer', zIndex: 90 
         }}
       >
         <Plus size={32} />
@@ -1099,29 +1469,46 @@ export default function Feed({ session }) {
 
       {/* MODAL DE CONFIRMAÇÃO PARA APAGAR POSTS */}
       {postToDelete && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 9999,
-          display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px', boxSizing: 'border-box', margin: 0
+        <div style={{ 
+          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', 
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 9999, 
+          display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px', 
+          boxSizing: 'border-box', margin: 0 
         }}>
-          <div style={{ width: '100%', maxWidth: '320px', textAlign: 'center', background: 'var(--bg-card)', borderRadius: '20px', padding: '25px 20px', boxShadow: '0 10px 25px rgba(0,0,0,0.3)', boxSizing: 'border-box' }}>
-            <div style={{ background: '#fee2e2', width: '50px', height: '50px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px auto' }}>
+          <div style={{ 
+            width: '100%', maxWidth: '320px', textAlign: 'center', 
+            background: 'var(--bg-card)', borderRadius: '20px', padding: '25px 20px', 
+            boxShadow: '0 10px 25px rgba(0,0,0,0.3)', boxSizing: 'border-box' 
+          }}>
+            <div style={{ 
+              background: '#fee2e2', width: '50px', height: '50px', borderRadius: '50%', 
+              display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px auto' 
+            }}>
               <Trash2 size={24} color="#ef4444" />
             </div>
-            <h3 style={{ margin: '0 0 10px 0', fontSize: '20px', color: 'var(--text)' }}>Apagar Publicação?</h3>
-            <p style={{ color: 'var(--text-dim)', fontSize: '14px', margin: '0 0 20px 0' }}>
-              Isto vai desaparecer para sempre do feed. Tens a certeza absoluta?
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '20px', color: 'var(--text)' }}>
+              Apagar Publicação?
+            </h3>
+            <p style={{ color: 'var(--text-dim)', fontSize: '14px', margin: '0 0 20px 0' }}> 
+              Isto vai desaparecer para sempre do feed. Tens a certeza absoluta? 
             </p>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-              <button
-                onClick={() => setPostToDelete(null)}
-                style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)', fontWeight: 'bold', cursor: 'pointer' }}
+              <button 
+                onClick={() => setPostToDelete(null)} 
+                style={{ 
+                  flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', 
+                  background: 'var(--input-bg)', color: 'var(--text)', fontWeight: 'bold', cursor: 'pointer' 
+                }}
               >
                 Cancelar
               </button>
-              <button
-                onClick={confirmarApagarPost}
-                style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', background: '#ef4444', color: 'white', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.3)' }}
+              <button 
+                onClick={confirmarApagarPost} 
+                style={{ 
+                  flex: 1, padding: '12px', borderRadius: '10px', border: 'none', 
+                  background: '#ef4444', color: 'white', fontWeight: 'bold', 
+                  cursor: 'pointer', boxShadow: '0 4px 10px rgba(239, 68, 68, 0.3)' 
+                }}
               >
                 Sim, Apagar
               </button>
@@ -1129,7 +1516,6 @@ export default function Feed({ session }) {
           </div>
         </div>
       )}
-
     </div>
   );
 }
