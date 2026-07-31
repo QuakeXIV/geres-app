@@ -121,10 +121,10 @@ export default function Livro({ session }) {
         </div>
       )}
 
-      {/* BOTÃO DE REFRESH MANUAL NO TOPO */}
+      {/* BOTÃO DE REFRESH MANUAL NO TOPO CORRIGIDO PARA MODO ESCURO */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
-        <button onClick={carregarQuotes} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #e2e8f0', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
-          <RefreshCw size={16} /> {isRefreshing ? 'A atualizar...' : 'Atualizar Livro'}
+        <button onClick={carregarQuotes} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+          <RefreshCw size={16} className={isRefreshing ? "spin" : ""} /> {isRefreshing ? 'A atualizar...' : 'Atualizar Livro'}
         </button>
       </div>
 
@@ -202,7 +202,7 @@ export default function Livro({ session }) {
         )}
       </div>
 
-      {/* MODAL DE CONFIRMAÇÃO */}
+      {/* MODAL DE CONFIRMAÇÃO CORRIGIDO PARA MODO ESCURO */}
       {quoteToDelete && (
         <div style={{
           position: 'fixed', 
@@ -222,7 +222,7 @@ export default function Livro({ session }) {
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
               <button 
                 onClick={() => setQuoteToDelete(null)} 
-                style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', background: '#f1f5f9', color: 'var(--text)', fontWeight: 'bold', cursor: 'pointer' }}
+                style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)', fontWeight: 'bold', cursor: 'pointer' }}
               >
                 Cancelar
               </button>
