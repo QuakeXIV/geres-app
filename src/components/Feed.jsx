@@ -41,9 +41,10 @@ export default function Feed({ session }) {
   const [editingPostId, setEditingPostId] = useState(null);
   const [editCaptionText, setEditCaptionText] = useState('');
 
-  // --- ESTADOS PARA COMENTÁRIOS ---
+  // --- ESTADOS PARA COMENTÁRIOS E RESPOSTAS ---
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editCommentText, setEditCommentText] = useState('');
+  const [replyState, setReplyState] = useState(null); // Guarda a quem estamos a responder
 
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
@@ -217,7 +218,6 @@ export default function Feed({ session }) {
       
       setViewingProfile({ ...viewingProfile, avatar_url: publicUrl });
       
-      // Avisa a Navbar/Header para atualizar a foto lá em cima!
       window.dispatchEvent(new Event('perfilAtualizado')); 
       carregarTudo();
       showToast('Foto de perfil atualizada! 📸', 'success');
@@ -241,14 +241,13 @@ export default function Feed({ session }) {
       showToast(error.message, 'error');
     } else {
       setViewingProfile({ ...viewingProfile, username: editUsernameText });
-      // Avisa a Navbar/Header
       window.dispatchEvent(new Event('perfilAtualizado')); 
       carregarTudo();
       showToast('Nome guardado com sucesso! ✍️', 'success');
     }
   }
 
-  // --- LÓGICA DE AUTO-COMPLETE DE MENÇÕES (MODAL POST/STORY) ---
+  // --- LÓGICA DE AUTO-COMPLETE DE MENÇÕES E RESPONDER ---
   function handleCaptionChange(e) {
     const value = e.target.value;
     setCaption(value);
@@ -282,7 +281,6 @@ export default function Feed({ session }) {
     setShowSuggestions(false);
   }
 
-  // --- LÓGICA DE AUTO-COMPLETE DE MENÇÕES (COMENTÁRIOS NO FEED) ---
   function handleCommentChange(e, postId) {
     const value = e.target.value;
     setCommentText({ ...commentText, [postId]: value });
@@ -319,6 +317,12 @@ export default function Feed({ session }) {
     setActiveCommentPostId(null);
   }
 
+  // Prepara a caixa de texto para responder a alguém
+  function handleResponder(postId, targetUserId, targetUsername) {
+    setCommentText({ ...commentText, [postId]: `@${targetUsername} ` });
+    setReplyState({ postId, targetUserId, targetUsername });
+  }
+
   const extrairMencoes = (texto) => {
     if (!texto) return [];
     const regex = /@([a-zA-Z0-9_]+)/g;
@@ -329,31 +333,6 @@ export default function Feed({ session }) {
     }
     return [...new Set(mencoes)];
   };
-
-  async function notificarMentions(texto, actorName) {
-    const usernames = extrairMencoes(texto);
-    if (usernames.length === 0) return;
-
-    const { data: users } = await supabase
-      .from('profiles')
-      .select('id')
-      .in('username', usernames);
-
-    if (users) {
-      for (const u of users) {
-        await fetch('/api/notify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            action: 'mention', 
-            actorName, 
-            targetId: u.id, 
-            actingId: session.user.id 
-          })
-        });
-      }
-    }
-  }
 
   async function notificarAcao(action, targetUserId = null) {
     try {
@@ -423,7 +402,22 @@ export default function Feed({ session }) {
         if (dbError) throw new Error(`Erro BD: ${dbError.message}`);
 
         const actorName = await notificarAcao('new_story');
-        await notificarMentions(caption, actorName);
+        
+        // Notifica menções no story
+        const usernames = extrairMencoes(caption);
+        if (usernames.length > 0) {
+          const { data: users } = await supabase.from('profiles').select('id').in('username', usernames);
+          if (users) {
+            for (const u of users) {
+              await fetch('/api/notify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'mention', actorName, targetId: u.id, actingId: session.user.id })
+              });
+            }
+          }
+        }
+
         showToast('Story adicionado com sucesso! 📸', 'success');
 
       } else {
@@ -438,7 +432,22 @@ export default function Feed({ session }) {
         if (dbError) throw new Error(`Erro BD: ${dbError.message}`);
 
         const actorName = await notificarAcao('new_post');
-        await notificarMentions(caption, actorName);
+
+        // Notifica menções no post
+        const usernames = extrairMencoes(caption);
+        if (usernames.length > 0) {
+          const { data: users } = await supabase.from('profiles').select('id').in('username', usernames);
+          if (users) {
+            for (const u of users) {
+              await fetch('/api/notify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'mention', actorName, targetId: u.id, actingId: session.user.id })
+              });
+            }
+          }
+        }
+
         showToast('Publicado com sucesso! 🚀', 'success');
       }
 
@@ -454,6 +463,7 @@ export default function Feed({ session }) {
     }
   }
 
+  // Lógica de navegação de Stories
   function abrirStory(userGroup) {
     setActiveStoryUser(userGroup);
     setCurrentStoryIndex(0);
@@ -518,6 +528,7 @@ export default function Feed({ session }) {
     }
   }
 
+  // --- LÓGICA DE EDITAR E APAGAR COMENTÁRIOS ---
   async function apagarComentario(commentId) {
     const confirmacao = window.confirm("Queres mesmo apagar este comentário?");
     if (!confirmacao) return;
@@ -564,12 +575,15 @@ export default function Feed({ session }) {
       await supabase.from('likes').delete().eq('post_id', postId).eq('user_id', session.user.id);
     } else {
       await supabase.from('likes').insert([{ post_id: postId, user_id: session.user.id }]);
-      if (postOwnerId !== session.user.id) notificarAcao('like', postOwnerId);
+      if (postOwnerId !== session.user.id) {
+        notificarAcao('like', postOwnerId);
+      }
     }
     carregarPosts();
   }
 
-  async function adicionarComentario(postId, postOwnerId) {
+  // LÓGICA MESTRE DE COMENTÁRIOS COM RESPOSTAS INTEGRADAS
+  async function adicionarComentario(postId, postOwnerId, postOwnerName) {
     const texto = commentText[postId];
     if (!texto) return;
 
@@ -582,10 +596,54 @@ export default function Feed({ session }) {
     setCommentText({ ...commentText, [postId]: '' });
     carregarPosts();
 
+    // Notificar dono do post (se eu não for o dono)
+    let actorName = 'Alguém';
     if (postOwnerId !== session.user.id) {
-      const actorName = await notificarAcao('comment', postOwnerId);
-      await notificarMentions(texto, actorName);
+      actorName = await notificarAcao('comment', postOwnerId);
+    } else {
+      const { data: profile } = await supabase.from('profiles').select('username').eq('id', session.user.id).single();
+      if (profile) actorName = profile.username;
     }
+
+    let userRespondido = null;
+
+    // Verificar se foi uma resposta direta (via botão Responder)
+    if (replyState && replyState.postId === postId && texto.includes(`@${replyState.targetUsername}`)) {
+      userRespondido = replyState.targetUsername;
+
+      if (replyState.targetUserId !== session.user.id) {
+        await fetch('/api/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'reply', // <-- Nova action no backend!
+            actorName: actorName,
+            targetId: replyState.targetUserId,
+            actingId: session.user.id,
+            postOwnerName: postOwnerName || 'Membro'
+          })
+        });
+      }
+    }
+
+    // Notificar as restantes menções (se houver, e ignorando a quem respondemos diretamente)
+    const usernames = extrairMencoes(texto).filter(u => u !== userRespondido);
+    if (usernames.length > 0) {
+      const { data: users } = await supabase.from('profiles').select('id').in('username', usernames);
+      if (users) {
+        for (const u of users) {
+          if (u.id !== session.user.id) {
+            await fetch('/api/notify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'mention', actorName, targetId: u.id, actingId: session.user.id })
+            });
+          }
+        }
+      }
+    }
+
+    setReplyState(null); // Limpa o estado da resposta
   }
 
   // --- LÓGICA DE FILTRAGEM DO FEED ---
@@ -853,7 +911,6 @@ export default function Feed({ session }) {
               </div>
             </div>
 
-            {/* ÍCONE DA CÂMARA SE FOR O TEU PERFIL */}
             {isMyProfile && (
               <label style={{ 
                 position: 'absolute', 
@@ -882,7 +939,6 @@ export default function Feed({ session }) {
             )}
           </div>
           
-          {/* INPUT PARA EDITAR O NOME SE FOR O TEU PERFIL */}
           {isMyProfile ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '15px' }}>
               <input 
@@ -1114,7 +1170,7 @@ export default function Feed({ session }) {
         </div>
       )}
 
-      {/* JANELA DE NOVA PUBLICAÇÃO */}
+      {/* JANELA DE NOVA PUBLICAÇÃO (MODAL UNIFICADO FEED/STORY) */}
       {isModalOpen && (
         <div style={{ 
           position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', 
@@ -1144,6 +1200,7 @@ export default function Feed({ session }) {
               />
               
               <div style={{ position: 'relative' }}>
+                {/* DROPDOWN DE SUGESTÕES (CRIAR POST/STORY) */}
                 {showSuggestions && !activeCommentPostId && mentionSuggestions.length > 0 && (
                   <div style={{ 
                     position: 'absolute', bottom: '100%', left: 0, width: '100%', 
@@ -1345,7 +1402,7 @@ export default function Feed({ session }) {
                   const aEditarComentario = editingCommentId === c.id;
 
                   return (
-                    <div key={c.id} style={{ display: 'flex', flexDirection: 'column', margin: '6px 0' }}>
+                    <div key={c.id} style={{ display: 'flex', flexDirection: 'column', margin: '8px 0' }}>
                       {aEditarComentario ? (
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
                           <input 
@@ -1369,32 +1426,44 @@ export default function Feed({ session }) {
                           </button>
                         </div>
                       ) : (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
-                          <p style={{ fontSize: '13px', margin: 0, color: 'var(--text)', flex: 1, wordBreak: 'break-word' }}>
-                            <span 
-                              style={{ fontWeight: 'bold', color: 'var(--text)', cursor: 'pointer' }} 
-                              onClick={() => { setViewingProfile({ id: c.user_id, username: c.profiles?.username, avatar_url: c.profiles?.avatar_url }); window.scrollTo(0,0); }}
-                            >
-                              @{c.profiles?.username}: 
-                            </span>
-                            {' '}{c.content}
-                          </p>
-                          {eMeuComentario && (
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                              <button 
-                                onClick={() => { setEditingCommentId(c.id); setEditCommentText(c.content); }} 
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
+                          <div style={{ flex: 1 }}>
+                            <p style={{ fontSize: '13px', margin: 0, color: 'var(--text)', wordBreak: 'break-word' }}>
+                              <span 
+                                style={{ fontWeight: 'bold', color: 'var(--text)', cursor: 'pointer' }} 
+                                onClick={() => { setViewingProfile({ id: c.user_id, username: c.profiles?.username, avatar_url: c.profiles?.avatar_url }); window.scrollTo(0,0); }}
                               >
-                                <Edit2 size={12} color="var(--text-dim)" />
-                              </button>
-                              <button 
-                                onClick={() => apagarComentario(c.id)} 
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                @{c.profiles?.username}: 
+                              </span>
+                              {' '}{c.content}
+                            </p>
+                            
+                            {/* BOTÃO RESPONDER + EDITAR + APAGAR ABAIXO DO COMENTÁRIO */}
+                            <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
+                              <span 
+                                onClick={() => handleResponder(post.id, c.user_id, c.profiles?.username)}
+                                style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 'bold', cursor: 'pointer' }}
                               >
-                                <Trash2 size={12} color="#ef4444" />
-                              </button>
+                                Responder
+                              </span>
+                              {eMeuComentario && (
+                                <>
+                                  <span 
+                                    onClick={() => { setEditingCommentId(c.id); setEditCommentText(c.content); }} 
+                                    style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 'bold', cursor: 'pointer' }}
+                                  >
+                                    Editar
+                                  </span>
+                                  <span 
+                                    onClick={() => apagarComentario(c.id)} 
+                                    style={{ fontSize: '11px', color: '#ef4444', fontWeight: 'bold', cursor: 'pointer' }}
+                                  >
+                                    Apagar
+                                  </span>
+                                </>
+                              )}
                             </div>
-                          )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1402,6 +1471,7 @@ export default function Feed({ session }) {
                 })}
 
                 <div style={{ position: 'relative', marginTop: '12px' }}>
+                  {/* DROPDOWN DE SUGESTÕES (COMENTÁRIOS NO FEED) */}
                   {showSuggestions && activeCommentPostId === post.id && mentionSuggestions.length > 0 && (
                     <div style={{ 
                       position: 'absolute', bottom: '100%', left: 0, width: '100%', 
@@ -1441,7 +1511,7 @@ export default function Feed({ session }) {
                     />
                     <button 
                       style={{ background: 'var(--accent)', border: 'none', borderRadius: '8px', padding: '0 12px', cursor: 'pointer' }} 
-                      onClick={() => adicionarComentario(post.id, post.user_id)}
+                      onClick={() => adicionarComentario(post.id, post.user_id, post.profiles?.username)}
                     >
                       <Send size={18} color="white" />
                     </button>

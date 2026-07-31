@@ -60,7 +60,8 @@ export default async function handler(req, res) {
   
   // 2. LÓGICA DIRETA DA APP (FRONTEND) COM NOMES REAIS
   else if (req.body && req.body.action) {
-    const { action, actorName, targetId, actingId, votosFaltam, extraInfo } = req.body;
+    // Adicionei o postOwnerName aqui na desestruturação para o apanhar do Feed.jsx
+    const { action, actorName, targetId, actingId, votosFaltam, extraInfo, postOwnerName } = req.body;
     actingUserId = actingId;
     targetUserId = targetId;
 
@@ -83,6 +84,11 @@ export default async function handler(req, res) {
     } else if (action === 'comment') {
       title = "Novo Comentário! 💬";
       message = `${actorName} comentou a tua publicação!`;
+      targetTab = "feed";
+    } else if (action === 'reply') {
+      // NOVA LÓGICA DE RESPOSTA INSERIDA AQUI
+      title = "Responderam-te! 💬";
+      message = `${actorName} respondeu-te na publicação de ${postOwnerName || 'alguém'}`;
       targetTab = "feed";
     } else if (action === 'mission_approval') {
       targetTab = "missoes";
