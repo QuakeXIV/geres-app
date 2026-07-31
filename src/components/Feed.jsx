@@ -307,6 +307,21 @@ export default function Feed({ session }) {
     }
   }
 
+  async function apagarStory(storyId) {
+    const confirmacao = window.confirm("Tens a certeza que queres apagar este story?");
+    if (!confirmacao) return;
+
+    const { error } = await supabase.from('stories').delete().eq('id', storyId);
+
+    if (error) {
+      showToast(`Erro ao apagar: ${error.message}`, 'error');
+    } else {
+      showToast('Story apagado! 🗑️', 'success');
+      setActiveStoryUser(null);
+      carregarStories();
+    }
+  }
+
   async function guardarEdicao(postId) {
     const { error } = await supabase
       .from('posts')
@@ -448,8 +463,8 @@ export default function Feed({ session }) {
             ))}
           </div>
 
-          {/* 2. CABEÇALHO DO STORY */}
-          <div style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top) + 15px)', left: 0, width: '100%', padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
+          {/* 2. CABEÇALHO DO STORY (Empurrado ligeiramente para baixo e com o X arranjado) */}
+          <div style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top) + 15px)', left: 0, width: '100%', padding: '0 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10, boxSizing: 'border-box' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ width: '32px', height: '32px', borderRadius: '50%', overflow: 'hidden', border: '1px solid white' }}>
                 {activeStoryUser.avatar ? <img src={activeStoryUser.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/> : <User color="white"/>}
@@ -459,9 +474,18 @@ export default function Feed({ session }) {
                 {formatarTempo(activeStoryUser.items[currentStoryIndex].created_at)}
               </span>
             </div>
-            <button onClick={() => setActiveStoryUser(null)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', padding: '5px' }}>
-              <X size={28} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />
-            </button>
+            
+            {/* BOTÕES DE APAGAR E FECHAR */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              {activeStoryUser.userId === session.user.id && (
+                <button onClick={() => apagarStory(activeStoryUser.items[currentStoryIndex].id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '5px' }}>
+                  <Trash2 size={24} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />
+                </button>
+              )}
+              <button onClick={() => setActiveStoryUser(null)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', padding: '5px' }}>
+                <X size={28} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />
+              </button>
+            </div>
           </div>
 
           {/* 3. ÁREA DE TOQUE (Esquerda/Direita) */}
