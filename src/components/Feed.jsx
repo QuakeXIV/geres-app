@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Heart, Send, Plus, X, Trash2, Edit2, Check, RefreshCw, User, Camera, Filter } from 'lucide-react';
+import { Heart, Send, Plus, X, Trash2, Edit2, Check, RefreshCw, User, Camera, Filter, Search, ArrowLeft } from 'lucide-react';
 
 function formatarTempo(dataIso) {
   if (!dataIso) return '';
@@ -37,6 +37,10 @@ export default function Feed({ session }) {
   const [editingPostId, setEditingPostId] = useState(null);
   const [editCaptionText, setEditCaptionText] = useState('');
 
+  // --- ESTADOS PARA COMENTÁRIOS ---
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editCommentText, setEditCommentText] = useState('');
+
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   // Story Viewer State
@@ -46,16 +50,18 @@ export default function Feed({ session }) {
   // Memória de stories vistos
   const [seenStories, setSeenStories] = useState([]);
 
-  // --- NOVOS ESTADOS (Menções, Comentários e Filtros) ---
+  // --- ESTADOS PARA AUTO-COMPLETE DE MENÇÕES E PESQUISA ---
   const [allUsers, setAllUsers] = useState([]);
   const [mentionSuggestions, setMentionSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [mentionStartIndex, setMentionStartIndex] = useState(0);
   const [activeCommentPostId, setActiveCommentPostId] = useState(null);
 
-  const [editingCommentId, setEditingCommentId] = useState(null);
-  const [editCommentText, setEditCommentText] = useState('');
+  // --- NOVOS ESTADOS: PESQUISA E PERFIL ---
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewingProfile, setViewingProfile] = useState(null);
 
+  // --- ESTADO: FILTRO DO FEED ---
   const [filterType, setFilterType] = useState('recentes');
 
   function showToast(message, type = 'success') {
@@ -521,6 +527,17 @@ export default function Feed({ session }) {
     return new Date(b.created_at) - new Date(a.created_at); 
   });
 
+  // --- LÓGICA DE VISUALIZAÇÃO DE PERFIL E OS SEUS POSTS ---
+  const postsToDisplay = viewingProfile 
+    ? [...posts].filter(p => p.user_id === viewingProfile.id).sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    : postsFiltrados;
+
+  // Variáveis para a argola de Story na Página de Perfil
+  const profileStoryGroup = viewingProfile ? groupedStories.find(g => g.userId === viewingProfile.id) : null;
+  const profileHasStories = !!profileStoryGroup;
+  const profileAllStoriesSeen = profileHasStories && profileStoryGroup.items.every(story => seenStories.includes(story.id));
+  const profileRingColor = profileAllStoriesSeen ? 'rgba(255, 255, 255, 0.15)' : 'linear-gradient(45deg, #f97316, #fbbf24)';
+
   return (
     <div style={{ padding: '10px', paddingBottom: 'calc(130px + env(safe-area-inset-bottom))' }}>
 
@@ -536,7 +553,7 @@ export default function Feed({ session }) {
       {/* BARRA SUPERIOR: TÍTULO E REFRESH */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
         <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          Feed
+          {viewingProfile ? 'Perfil' : 'Feed'}
         </h2>
         <button 
           onClick={carregarTudo} 
@@ -548,49 +565,125 @@ export default function Feed({ session }) {
         </button>
       </div>
 
-      {/* BARRA DE STORIES ESTILO INSTAGRAM */}
-      <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '15px', marginBottom: '15px', borderBottom: '1px solid var(--border)' }}>
+      {/* BARRA DE PESQUISA (SÓ APARECE NO FEED) */}
+      {!viewingProfile && (
+        <div style={{ position: 'relative', marginBottom: '15px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', background: 'var(--input-bg)', borderRadius: '12px', padding: '0 12px', border: '1px solid var(--border)' }}>
+            <Search size={18} color="var(--text-dim)" />
+            <input 
+              type="text" 
+              placeholder="Pesquisar utilizador..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ background: 'transparent', border: 'none', color: 'var(--text)', padding: '12px', width: '100%', outline: 'none', fontSize: '14px' }}
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', padding: '0', display: 'flex', cursor: 'pointer' }}>
+                <X size={18} color="var(--text-dim)" />
+              </button>
+            )}
+          </div>
+          
+          {/* RESULTADOS DA PESQUISA */}
+          {searchQuery && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', maxHeight: '200px', overflowY: 'auto', zIndex: 50, marginTop: '5px', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}>
+              {allUsers.filter(u => u.username?.toLowerCase().includes(searchQuery.toLowerCase())).length > 0 ? (
+                allUsers.filter(u => u.username?.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (
+                  <div key={u.id} onClick={() => { setViewingProfile(u); setSearchQuery(''); window.scrollTo(0,0); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}>
+                    <div style={{ width: '30px', height: '30px', borderRadius: '50%', overflow: 'hidden', background: 'var(--input-bg)' }}>
+                      {u.avatar_url ? (
+                        <img src={u.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <User size={16} color="var(--text-dim)" style={{ margin: '7px' }} />
+                      )}
+                    </div>
+                    <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>{u.username}</span>
+                  </div>
+                ))
+              ) : (
+                <div style={{ padding: '12px', textAlign: 'center', color: 'var(--text-dim)', fontSize: '14px' }}>
+                  Nenhum utilizador encontrado.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
-        {/* BOTÃO ADICIONAR STORY (Agora perfeitamente redondo) */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '70px', cursor: 'pointer' }} onClick={() => { setIsStoryMode(true); setIsModalOpen(true); }}>
-          <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--input-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed var(--text-dim)', position: 'relative' }}>
-            <Plus size={24} color="var(--text-dim)" />
-            <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', background: 'var(--accent)', borderRadius: '50%', border: '2px solid var(--bg-card)', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Plus size={14} color="white" />
+      {/* CABEÇALHO DA PÁGINA DE PERFIL (SÓ APARECE SE ALGUÉM FOI SELECIONADO) */}
+      {viewingProfile && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'var(--bg-card)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border)', marginBottom: '15px', position: 'relative' }}>
+          <button 
+            onClick={() => { setViewingProfile(null); window.scrollTo(0,0); }} 
+            style={{ position: 'absolute', top: '15px', left: '15px', background: 'var(--input-bg)', border: 'none', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+          >
+            <ArrowLeft size={20} color="var(--text)" />
+          </button>
+          
+          <div 
+            style={{ cursor: profileHasStories ? 'pointer' : 'default' }} 
+            onClick={() => profileHasStories && abrirStory(profileStoryGroup)}
+          >
+            <div style={{ width: '80px', height: '80px', borderRadius: '50%', padding: '3px', background: profileHasStories ? profileRingColor : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: 'var(--bg-card)', border: '2px solid var(--bg-card)' }}>
+                {viewingProfile.avatar_url ? (
+                  <img src={viewingProfile.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <User size={32} color="var(--text-dim)" style={{ margin: '22px' }} />
+                )}
+              </div>
             </div>
           </div>
-          <span style={{ fontSize: '12px', color: 'var(--text-dim)', marginTop: '5px' }}>O Teu Story</span>
+          <h3 style={{ margin: '10px 0 0 0', color: 'var(--text)', fontSize: '18px' }}>@{viewingProfile.username}</h3>
+          <p style={{ margin: '5px 0 0 0', color: 'var(--text-dim)', fontSize: '14px' }}>{postsToDisplay.length} publicações</p>
         </div>
+      )}
 
-        {/* LISTA DE STORIES ATIVOS */}
-        {groupedStories.map(group => {
-          // Verifica se TODOS os stories desta pessoa já foram vistos
-          const todosVistos = group.items.every(story => seenStories.includes(story.id));
-          
-          // Se já viu tudo fica argola cinzenta. Se não, fica laranja!
-          const corArgola = todosVistos ? 'rgba(255, 255, 255, 0.15)' : 'linear-gradient(45deg, #f97316, #fbbf24)';
-          const opacidadeNome = todosVistos ? 0.5 : 1;
+      {/* BARRA DE STORIES ESTILO INSTAGRAM (SÓ APARECE NO FEED) */}
+      {!viewingProfile && (
+        <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '15px', marginBottom: '15px', borderBottom: '1px solid var(--border)' }}>
 
-          return (
-            <div key={group.userId} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '70px', cursor: 'pointer' }} onClick={() => abrirStory(group)}>
-              <div style={{ width: '64px', height: '64px', borderRadius: '50%', padding: '3px', background: corArgola, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: 'var(--bg-card)', border: '2px solid var(--bg-card)' }}>
-                  {group.avatar ? (
-                    <img src={group.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <User size={24} color="var(--text-dim)" />
-                    </div>
-                  )}
-                </div>
+          {/* BOTÃO ADICIONAR STORY */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '70px', cursor: 'pointer' }} onClick={() => { setIsStoryMode(true); setIsModalOpen(true); }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--input-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed var(--text-dim)', position: 'relative' }}>
+              <Plus size={24} color="var(--text-dim)" />
+              <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', background: 'var(--accent)', borderRadius: '50%', border: '2px solid var(--bg-card)', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Plus size={14} color="white" />
               </div>
-              <span style={{ fontSize: '12px', color: 'var(--text)', opacity: opacidadeNome, marginTop: '5px', fontWeight: group.userId === session.user.id ? 'bold' : 'normal' }}>
-                {group.userId === session.user.id ? 'Tu' : group.username}
-              </span>
             </div>
-          );
-        })}
-      </div>
+            <span style={{ fontSize: '12px', color: 'var(--text-dim)', marginTop: '5px' }}>O Teu Story</span>
+          </div>
+
+          {/* LISTA DE STORIES ATIVOS */}
+          {groupedStories.map(group => {
+            // Verifica se TODOS os stories desta pessoa já foram vistos
+            const todosVistos = group.items.every(story => seenStories.includes(story.id));
+            
+            // Se já viu tudo fica argola cinzenta. Se não, fica laranja!
+            const corArgola = todosVistos ? 'rgba(255, 255, 255, 0.15)' : 'linear-gradient(45deg, #f97316, #fbbf24)';
+            const opacidadeNome = todosVistos ? 0.5 : 1;
+
+            return (
+              <div key={group.userId} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '70px', cursor: 'pointer' }} onClick={() => abrirStory(group)}>
+                <div style={{ width: '64px', height: '64px', borderRadius: '50%', padding: '3px', background: corArgola, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: 'var(--bg-card)', border: '2px solid var(--bg-card)' }}>
+                    {group.avatar ? (
+                      <img src={group.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <User size={24} color="var(--text-dim)" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <span style={{ fontSize: '12px', color: 'var(--text)', opacity: opacidadeNome, marginTop: '5px', fontWeight: group.userId === session.user.id ? 'bold' : 'normal' }}>
+                  {group.userId === session.user.id ? 'Tu' : group.username}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* STORY VIEWER (FULLSCREEN) */}
       {activeStoryUser && (
@@ -735,41 +828,46 @@ export default function Feed({ session }) {
         </div>
       )}
 
-      {/* BARRA DE FILTRAGEM DO FEED */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-        <h3 style={{ margin: 0, fontSize: '15px', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          <Filter size={16} /> Publicações
-        </h3>
-        <select 
-          value={filterType} 
-          onChange={(e) => setFilterType(e.target.value)}
-          style={{ 
-            background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)', 
-            borderRadius: '10px', padding: '6px 12px', fontSize: '13px', outline: 'none', fontWeight: 'bold', cursor: 'pointer' 
-          }}
-        >
-          <option value="recentes">Mais Recentes</option>
-          <option value="populares">Mais Populares 🔥</option>
-          <option value="meus">Só os Meus 🙋‍♂️</option>
-          <option value="antigos">Mais Antigos 🕰️</option>
-        </select>
-      </div>
+      {/* BARRA DE FILTRAGEM DO FEED (SÓ APARECE SE NÃO ESTIVER NUM PERFIL) */}
+      {!viewingProfile && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+          <h3 style={{ margin: 0, fontSize: '15px', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <Filter size={16} /> Publicações
+          </h3>
+          <select 
+            value={filterType} 
+            onChange={(e) => setFilterType(e.target.value)}
+            style={{ 
+              background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)', 
+              borderRadius: '10px', padding: '6px 12px', fontSize: '13px', outline: 'none', fontWeight: 'bold', cursor: 'pointer' 
+            }}
+          >
+            <option value="recentes">Mais Recentes</option>
+            <option value="populares">Mais Populares 🔥</option>
+            <option value="meus">Só os Meus 🙋‍♂️</option>
+            <option value="antigos">Mais Antigos 🕰️</option>
+          </select>
+        </div>
+      )}
 
-      {/* FEED DE POSTS */}
-      {postsFiltrados.length === 0 ? (
+      {/* FEED DE POSTS (MURAL OU PERFIL) */}
+      {postsToDisplay.length === 0 ? (
         <div style={{
           textAlign: 'center', marginTop: '40px', padding: '30px 20px',
           background: 'var(--bg-card)', borderRadius: '16px',
           border: '2px dashed var(--accent)', backdropFilter: 'blur(5px)'
         }}>
-          <span style={{ fontSize: '45px', display: 'block', marginBottom: '15px' }}>🏜️</span>
+          <span style={{ fontSize: '45px', display: 'block', marginBottom: '15px' }}>{viewingProfile ? '👀' : '🏜️'}</span>
           <h3 style={{ color: 'var(--accent)', margin: '0 0 10px 0', fontSize: '22px' }}>Nada por aqui!</h3>
           <p style={{ color: 'var(--text)', margin: 0, fontWeight: '500', fontSize: '15px' }}>
-            Não encontramos publicações para este filtro.
+            {viewingProfile 
+              ? 'Este utilizador ainda não publicou nada no feed.' 
+              : 'Não encontramos publicações. Arranca com a festa!'
+            }
           </p>
         </div>
       ) : (
-        postsFiltrados.map((post) => {
+        postsToDisplay.map((post) => {
           const jaDeuLike = post.likes?.some((l) => l.user_id === session.user.id);
           const eMeuPost = post.user_id === session.user.id;
           const aEditar = editingPostId === post.id;
@@ -780,8 +878,11 @@ export default function Feed({ session }) {
             <div key={post.id} className="card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
 
-                {/* CABEÇALHO DO POST COM FOTO DE PERFIL */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {/* CABEÇALHO DO POST COM FOTO DE PERFIL (CLICÁVEL PARA ABRIR PERFIL) */}
+                <div 
+                  onClick={() => { setViewingProfile({ id: post.user_id, username: post.profiles?.username, avatar_url: post.profiles?.avatar_url }); window.scrollTo(0,0); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
+                >
                   <div style={{ width: '42px', height: '42px', borderRadius: '50%', overflow: 'hidden', background: 'var(--input-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--accent)' }}>
                     {avatar ? (
                       <img src={avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -900,8 +1001,13 @@ export default function Feed({ session }) {
                       ) : (
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
                           <p style={{ fontSize: '13px', margin: 0, color: 'var(--text)', flex: 1, wordBreak: 'break-word' }}>
-                            <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>@{c.profiles?.username}: </span>
-                            {c.content}
+                            <span 
+                              style={{ fontWeight: 'bold', color: 'var(--text)', cursor: 'pointer' }}
+                              onClick={() => { setViewingProfile({ id: c.user_id, username: c.profiles?.username, avatar_url: c.profiles?.avatar_url }); window.scrollTo(0,0); }}
+                            >
+                              @{c.profiles?.username}: 
+                            </span>
+                            {' '}{c.content}
                           </p>
                           {eMeuComentario && (
                             <div style={{ display: 'flex', gap: '8px' }}>
