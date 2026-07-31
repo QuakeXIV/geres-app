@@ -68,6 +68,14 @@ export default async function handler(req, res) {
       title = "Temos conteúdo novo! 🍺";
       message = `${actorName} acabou de publicar no feed, vai cuscar!`;
       targetTab = "feed";
+    } else if (action === 'new_story') {
+      title = "Novo Story! 📸";
+      message = `${actorName} adicionou um story novo. Desaparece em 24h!`;
+      targetTab = "feed";
+    } else if (action === 'mention') {
+      title = "Foste apanhado! 🎯";
+      message = `${actorName} mencionou-te numa publicação! Vai ver o que disseram de ti.`;
+      targetTab = "feed";
     } else if (action === 'like') {
       title = "Novo Like! ❤️";
       message = `${actorName} curtiu a tua publicação!`;

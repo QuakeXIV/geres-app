@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Heart, Send, Plus, X, Trash2, Edit2, Check, RefreshCw, User } from 'lucide-react';
+import { Heart, Send, Plus, X, Trash2, Edit2, Check, RefreshCw, User, Camera } from 'lucide-react';
 
 function formatarTempo(dataIso) {
   if (!dataIso) return '';
@@ -24,12 +24,14 @@ function formatarTempo(dataIso) {
 
 export default function Feed({ session }) {
   const [posts, setPosts] = useState([]);
+  const [groupedStories, setGroupedStories] = useState([]);
   const [caption, setCaption] = useState('');
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [commentText, setCommentText] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isStoryMode, setIsStoryMode] = useState(false);
   const [postToDelete, setPostToDelete] = useState(null);
 
   const [editingPostId, setEditingPostId] = useState(null);
@@ -37,18 +39,21 @@ export default function Feed({ session }) {
 
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
+  // Story Viewer State
+  const [activeStoryUser, setActiveStoryUser] = useState(null);
+  const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
+
   function showToast(message, type = 'success') {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 4000);
   }
 
-  // A MÁGICA DE ATUALIZAR: Atualiza quando abres a app
   useEffect(() => {
-    carregarPosts();
+    carregarTudo();
 
     const recarregarSeVisivel = () => {
       if (document.visibilityState === 'visible') {
-        carregarPosts();
+        carregarTudo();
       }
     };
 
@@ -61,9 +66,13 @@ export default function Feed({ session }) {
     };
   }, []);
 
-  async function carregarPosts() {
+  async function carregarTudo() {
     setIsRefreshing(true);
-    // VAI BUSCAR POSTS E AS FOTOS DE PERFIL (avatar_url)
+    await Promise.all([carregarPosts(), carregarStories()]);
+    setIsRefreshing(false);
+  }
+
+  async function carregarPosts() {
     const { data, error } = await supabase
       .from('posts')
       .select('*, profiles(username, avatar_url), likes(user_id), comments(*, profiles(username))')
@@ -71,11 +80,76 @@ export default function Feed({ session }) {
       .order('created_at', { ascending: false });
 
     if (!error) setPosts(data);
-    setIsRefreshing(false);
   }
 
-  // 🚨 ATENÇÃO: Se o teu ficheiro backend não se chamar "notify.js", altera a rota '/api/notify' abaixo!
-  async function notificarDono(action, targetUserId) {
+  async function carregarStories() {
+    const limite24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    
+    const { data, error } = await supabase
+      .from('stories')
+      .select('*, profiles(username, avatar_url)')
+      .gt('created_at', limite24h)
+      .order('created_at', { ascending: true }); // Os mais antigos primeiro na lista para o carrossel
+
+    if (!error && data) {
+      const grupos = {};
+      data.forEach(story => {
+        const userId = story.user_id;
+        if (!grupos[userId]) {
+          grupos[userId] = {
+            userId: userId,
+            username: story.profiles?.username || 'Membro',
+            avatar: story.profiles?.avatar_url,
+            items: []
+          };
+        }
+        grupos[userId].items.push(story);
+      });
+      
+      let sortedGroups = Object.values(grupos);
+      const myIndex = sortedGroups.findIndex(g => g.userId === session.user.id);
+      if (myIndex > -1) {
+        const myGroup = sortedGroups.splice(myIndex, 1)[0];
+        sortedGroups.unshift(myGroup);
+      }
+      
+      setGroupedStories(sortedGroups);
+    }
+  }
+
+  // --- DETETOR DE MENÇÕES ---
+  const extrairMencoes = (texto) => {
+    if (!texto) return [];
+    const regex = /@([a-zA-Z0-9_]+)/g;
+    const mencoes = [];
+    let match;
+    while ((match = regex.exec(texto)) !== null) {
+      mencoes.push(match[1]); // Guarda só o nome
+    }
+    return [...new Set(mencoes)]; 
+  };
+
+  async function notificarMentions(texto, actorName) {
+    const usernames = extrairMencoes(texto);
+    if (usernames.length === 0) return;
+
+    const { data: users } = await supabase
+      .from('profiles')
+      .select('id')
+      .in('username', usernames);
+
+    if (users) {
+      for (const u of users) {
+        await fetch('/api/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'mention', actorName, targetId: u.id, actingId: session.user.id })
+        });
+      }
+    }
+  }
+
+  async function notificarAcao(action, targetUserId = null) {
     try {
       const { data: profile } = await supabase
         .from('profiles')
@@ -85,7 +159,6 @@ export default function Feed({ session }) {
         
       const actorName = profile?.username || 'Alguém';
 
-      // CAMINHO RELATIVO: Resolve problemas de CORS e links errados
       const res = await fetch('/api/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -97,15 +170,15 @@ export default function Feed({ session }) {
         })
       });
 
-      if (!res.ok) {
-        console.error("Erro na Vercel ao enviar push:", await res.text());
-      }
+      if (!res.ok) console.error("Erro na Vercel ao enviar push:", await res.text());
+      return actorName;
     } catch (err) {
       console.log("Erro a notificar:", err);
+      return 'Alguém';
     }
   }
 
-  async function publicarPost(e) {
+  async function publicar(e) {
     e.preventDefault();
 
     try {
@@ -133,46 +206,65 @@ export default function Feed({ session }) {
       const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(filePath);
       const isVideo = file.type.startsWith('video') || fileExt.match(/(mp4|mov|webm|avi)$/i);
 
-      const { error: dbError } = await supabase.from('posts').insert([{
-        user_id: session.user.id,
-        media_url: publicUrl,
-        media_type: isVideo ? 'video' : 'image',
-        caption,
-        is_disposable: false
-      }]);
+      if (isStoryMode) {
+        const { error: dbError } = await supabase.from('stories').insert([{
+          user_id: session.user.id,
+          media_url: publicUrl,
+          media_type: isVideo ? 'video' : 'image',
+          caption
+        }]);
 
-      if (dbError) throw new Error(`Erro BD: ${dbError.message}`);
+        if (dbError) throw new Error(`Erro BD: ${dbError.message}`);
 
-      // AVISA A MALTA PELO NOME DE QUEM PUBLICOU O POST (Usando caminho relativo)
-      try {
-        const { data: profile } = await supabase.from('profiles').select('username').eq('id', session.user.id).single();
-        const res = await fetch('/api/notify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'new_post',
-            actorName: profile?.username || 'Alguém',
-            actingId: session.user.id
-          })
-        });
+        const actorName = await notificarAcao('new_story');
+        await notificarMentions(caption, actorName);
+        showToast('Story adicionado com sucesso! 📸', 'success');
 
-        if (!res.ok) {
-          console.error("Erro na Vercel ao avisar novo post:", await res.text());
-        }
-      } catch (err) {
-        console.log("Erro a notificar:", err);
+      } else {
+        const { error: dbError } = await supabase.from('posts').insert([{
+          user_id: session.user.id,
+          media_url: publicUrl,
+          media_type: isVideo ? 'video' : 'image',
+          caption,
+          is_disposable: false
+        }]);
+
+        if (dbError) throw new Error(`Erro BD: ${dbError.message}`);
+
+        const actorName = await notificarAcao('new_post');
+        await notificarMentions(caption, actorName);
+        showToast('Publicado com sucesso! 🚀', 'success');
       }
 
-      showToast('Publicado com sucesso! 🚀', 'success');
       setCaption('');
       setFile(null);
       setIsModalOpen(false);
-      carregarPosts();
+      carregarTudo();
 
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
       setUploading(false);
+    }
+  }
+
+  // Lógica de navegação de Stories
+  function abrirStory(userGroup) {
+    setActiveStoryUser(userGroup);
+    setCurrentStoryIndex(0);
+  }
+
+  function nextStory() {
+    if (currentStoryIndex < activeStoryUser.items.length - 1) {
+      setCurrentStoryIndex(prev => prev + 1);
+    } else {
+      setActiveStoryUser(null);
+    }
+  }
+
+  function prevStory() {
+    if (currentStoryIndex > 0) {
+      setCurrentStoryIndex(prev => prev - 1);
     }
   }
 
@@ -224,7 +316,7 @@ export default function Feed({ session }) {
     } else {
       await supabase.from('likes').insert([{ post_id: postId, user_id: session.user.id }]);
       if (postOwnerId !== session.user.id) {
-        notificarDono('like', postOwnerId);
+        notificarAcao('like', postOwnerId);
       }
     }
     carregarPosts();
@@ -244,7 +336,8 @@ export default function Feed({ session }) {
     carregarPosts();
 
     if (postOwnerId !== session.user.id) {
-      notificarDono('comment', postOwnerId);
+      const actorName = await notificarAcao('comment', postOwnerId);
+      await notificarMentions(texto, actorName);
     }
   }
 
@@ -260,14 +353,94 @@ export default function Feed({ session }) {
         </div>
       )}
 
-      {/* BOTÃO DE REFRESH MANUAL */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
-        <button onClick={carregarPosts} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '8px 15px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
-          <RefreshCw size={16} /> {isRefreshing ? 'A atualizar...' : 'Atualizar Feed'}
+      {/* BARRA SUPERIOR: TÍTULO E REFRESH */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+        <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          Feed
+        </h2>
+        <button onClick={carregarTudo} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+          <RefreshCw size={14} className={isRefreshing ? "spin" : ""} /> {isRefreshing ? 'A atualizar...' : 'Atualizar'}
         </button>
       </div>
 
-      {/* JANELA DE NOVA PUBLICAÇÃO (MODAL) */}
+      {/* BARRA DE STORIES ESTILO INSTAGRAM */}
+      <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '15px', marginBottom: '15px', borderBottom: '1px solid var(--border)' }}>
+        
+        {/* BOTÃO ADICIONAR STORY */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '70px', cursor: 'pointer' }} onClick={() => { setIsStoryMode(true); setIsModalOpen(true); }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--input-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed var(--text-dim)', position: 'relative' }}>
+            <Plus size={24} color="var(--text-dim)" />
+            <div style={{ position: 'absolute', bottom: 0, right: 0, background: 'var(--accent)', borderRadius: '50%', padding: '2px', border: '2px solid var(--bg-card)' }}>
+              <Plus size={12} color="white" />
+            </div>
+          </div>
+          <span style={{ fontSize: '12px', color: 'var(--text-dim)', marginTop: '5px' }}>O Teu Story</span>
+        </div>
+
+        {/* LISTA DE STORIES ATIVOS */}
+        {groupedStories.map(group => (
+          <div key={group.userId} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '70px', cursor: 'pointer' }} onClick={() => abrirStory(group)}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', padding: '3px', background: 'linear-gradient(45deg, #f97316, #fbbf24)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: 'var(--bg-card)', border: '2px solid var(--bg-card)' }}>
+                {group.avatar ? (
+                  <img src={group.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <User size={24} color="var(--text-dim)" />
+                  </div>
+                )}
+              </div>
+            </div>
+            <span style={{ fontSize: '12px', color: 'var(--text)', marginTop: '5px', fontWeight: group.userId === session.user.id ? 'bold' : 'normal' }}>
+              {group.userId === session.user.id ? 'Tu' : group.username}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* STORY VIEWER (FULLSCREEN) */}
+      {activeStoryUser && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'black', zIndex: 10000, display: 'flex', flexDirection: 'column' }}>
+          
+          <div style={{ position: 'absolute', top: 'env(safe-area-inset-top)', left: 0, width: '100%', padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '50%', overflow: 'hidden', border: '1px solid white' }}>
+                {activeStoryUser.avatar ? <img src={activeStoryUser.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/> : <User color="white"/>}
+              </div>
+              <span style={{ color: 'white', fontWeight: 'bold', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>@{activeStoryUser.username}</span>
+              <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+                {formatarTempo(activeStoryUser.items[currentStoryIndex].created_at)}
+              </span>
+            </div>
+            <button onClick={() => setActiveStoryUser(null)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', padding: '5px' }}>
+              <X size={28} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />
+            </button>
+          </div>
+
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', zIndex: 5 }}>
+            <div style={{ flex: 1 }} onClick={prevStory}></div>
+            <div style={{ flex: 1 }} onClick={nextStory}></div>
+          </div>
+
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+            {activeStoryUser.items[currentStoryIndex].media_type === 'video' ? (
+              <video src={activeStoryUser.items[currentStoryIndex].media_url} autoPlay playsInline loop style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+            ) : (
+              <img src={activeStoryUser.items[currentStoryIndex].media_url} alt="Story" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+            )}
+
+            {activeStoryUser.items[currentStoryIndex].caption && (
+              <div style={{ position: 'absolute', bottom: '100px', left: '20px', right: '20px', textAlign: 'center', zIndex: 10 }}>
+                <span style={{ background: 'rgba(0,0,0,0.6)', color: 'white', padding: '8px 16px', borderRadius: '12px', fontSize: '16px', textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
+                  {activeStoryUser.items[currentStoryIndex].caption}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* JANELA DE NOVA PUBLICAÇÃO (MODAL UNIFICADO FEED/STORY) */}
       {isModalOpen && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
@@ -282,8 +455,12 @@ export default function Feed({ session }) {
               <X size={24} />
             </button>
 
-            <h3 style={{ margin: '0 0 15px 0' }}>📸 Nova Publicação</h3>
-            <form onSubmit={publicarPost}>
+            <h3 style={{ margin: '0 0 5px 0' }}>{isStoryMode ? '📸 Novo Story' : '🚀 Novo Post'}</h3>
+            <p style={{ margin: '0 0 15px 0', fontSize: '12px', color: 'var(--text-dim)' }}>
+              Usa <strong style={{color: 'var(--accent)'}}>@nome</strong> para notificar alguém diretamente!
+            </p>
+
+            <form onSubmit={publicar}>
               <input
                 className="input-field"
                 type="file"
@@ -294,12 +471,12 @@ export default function Feed({ session }) {
               <input
                 className="input-field"
                 type="text"
-                placeholder="Escreve uma legenda..."
+                placeholder={isStoryMode ? "Escreve algo para o story..." : "Escreve uma legenda..."}
                 value={caption}
                 onChange={(e) => setCaption(e.target.value)}
               />
-              <button className="btn-primary" disabled={uploading}>
-                {uploading ? 'A enviar... aguarda ⏳' : 'Publicar no Feed'}
+              <button className="btn-primary" disabled={uploading} style={{ background: isStoryMode ? 'linear-gradient(45deg, #f97316, #fbbf24)' : 'var(--accent)' }}>
+                {uploading ? 'A enviar... aguarda ⏳' : (isStoryMode ? 'Adicionar ao Story' : 'Publicar no Feed')}
               </button>
             </form>
           </div>
@@ -309,7 +486,7 @@ export default function Feed({ session }) {
       {/* FEED DE POSTS */}
       {posts.length === 0 ? (
         <div style={{
-          textAlign: 'center', marginTop: '60px', padding: '30px 20px',
+          textAlign: 'center', marginTop: '40px', padding: '30px 20px',
           background: 'var(--bg-card)', borderRadius: '16px',
           border: '2px dashed var(--accent)', backdropFilter: 'blur(5px)'
         }}>
@@ -447,9 +624,9 @@ export default function Feed({ session }) {
         })
       )}
 
-      {/* BOTÃO FLUTUANTE DE "+" */}
+      {/* BOTÃO FLUTUANTE DE "+" PARA FEED */}
       <button
-        onClick={() => setIsModalOpen(true)}
+        onClick={() => { setIsStoryMode(false); setIsModalOpen(true); }}
         style={{
           position: 'fixed', bottom: 'calc(100px + env(safe-area-inset-bottom))', right: '20px', width: '60px', height: '60px',
           background: 'var(--accent)', color: 'white', borderRadius: '50%',
@@ -461,7 +638,7 @@ export default function Feed({ session }) {
         <Plus size={32} />
       </button>
 
-      {/* MODAL DE CONFIRMAÇÃO CUSTOMIZADO */}
+      {/* MODAL DE CONFIRMAÇÃO PARA APAGAR POSTS */}
       {postToDelete && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
