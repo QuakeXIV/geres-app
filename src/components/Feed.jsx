@@ -9,16 +9,16 @@ function formatarTempo(dataIso) {
   const segundos = Math.floor((agora - dataPost) / 1000);
 
   if (segundos < 60) return 'agora mesmo';
-  
+
   const minutos = Math.floor(segundos / 60);
   if (minutos < 60) return `há ${minutos}m`;
-  
+
   const horas = Math.floor(minutos / 60);
   if (horas < 24) return `há ${horas}h`;
-  
+
   const dias = Math.floor(horas / 24);
   if (dias < 7) return `há ${dias}d`;
-  
+
   return dataPost.toLocaleDateString('pt-PT');
 }
 
@@ -84,7 +84,7 @@ export default function Feed({ session }) {
 
   async function carregarStories() {
     const limite24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    
+
     const { data, error } = await supabase
       .from('stories')
       .select('*, profiles(username, avatar_url)')
@@ -105,14 +105,14 @@ export default function Feed({ session }) {
         }
         grupos[userId].items.push(story);
       });
-      
+
       let sortedGroups = Object.values(grupos);
       const myIndex = sortedGroups.findIndex(g => g.userId === session.user.id);
       if (myIndex > -1) {
         const myGroup = sortedGroups.splice(myIndex, 1)[0];
         sortedGroups.unshift(myGroup);
       }
-      
+
       setGroupedStories(sortedGroups);
     }
   }
@@ -126,7 +126,7 @@ export default function Feed({ session }) {
     while ((match = regex.exec(texto)) !== null) {
       mencoes.push(match[1]); // Guarda só o nome
     }
-    return [...new Set(mencoes)]; 
+    return [...new Set(mencoes)];
   };
 
   async function notificarMentions(texto, actorName) {
@@ -156,7 +156,7 @@ export default function Feed({ session }) {
         .select('username')
         .eq('id', session.user.id)
         .single();
-        
+
       const actorName = profile?.username || 'Alguém';
 
       const res = await fetch('/api/notify', {
@@ -365,13 +365,13 @@ export default function Feed({ session }) {
 
       {/* BARRA DE STORIES ESTILO INSTAGRAM */}
       <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '15px', marginBottom: '15px', borderBottom: '1px solid var(--border)' }}>
-        
+
         {/* BOTÃO ADICIONAR STORY */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '70px', cursor: 'pointer' }} onClick={() => { setIsStoryMode(true); setIsModalOpen(true); }}>
           <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--input-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed var(--text-dim)', position: 'relative' }}>
             <Plus size={24} color="var(--text-dim)" />
-            <div style={{ position: 'absolute', bottom: 0, right: 0, background: 'var(--accent)', borderRadius: '50%', padding: '2px', border: '2px solid var(--bg-card)' }}>
-              <Plus size={12} color="white" />
+            <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', background: 'var(--accent)', borderRadius: '50%', border: '2px solid var(--bg-card)', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Plus size={14} color="white" />
             </div>
           </div>
           <span style={{ fontSize: '12px', color: 'var(--text-dim)', marginTop: '5px' }}>O Teu Story</span>
@@ -398,11 +398,27 @@ export default function Feed({ session }) {
         ))}
       </div>
 
-      {/* STORY VIEWER (FULLSCREEN) */}
+{/* STORY VIEWER (FULLSCREEN) */}
       {activeStoryUser && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'black', zIndex: 10000, display: 'flex', flexDirection: 'column' }}>
           
-          <div style={{ position: 'absolute', top: 'env(safe-area-inset-top)', left: 0, width: '100%', padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
+          {/* 1. BARRA DE PROGRESSO TIPO INSTA */}
+          <div style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top) + 10px)', left: '10px', right: '10px', display: 'flex', gap: '4px', zIndex: 20 }}>
+            {activeStoryUser.items.map((_, idx) => (
+              <div key={idx} style={{ flex: 1, height: '3px', background: 'rgba(255,255,255,0.3)', borderRadius: '2px', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  background: 'white',
+                  // Preenche 100% se já passou ou é o atual, 0% se ainda não chegou
+                  width: idx <= currentStoryIndex ? '100%' : '0%',
+                  transition: 'width 0.2s ease-in-out'
+                }}></div>
+              </div>
+            ))}
+          </div>
+
+          {/* 2. CABEÇALHO DO STORY (Empurrado ligeiramente para baixo) */}
+          <div style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top) + 15px)', left: 0, width: '100%', padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ width: '32px', height: '32px', borderRadius: '50%', overflow: 'hidden', border: '1px solid white' }}>
                 {activeStoryUser.avatar ? <img src={activeStoryUser.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/> : <User color="white"/>}
@@ -417,11 +433,13 @@ export default function Feed({ session }) {
             </button>
           </div>
 
+          {/* 3. ÁREA DE TOQUE (Esquerda/Direita) */}
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', zIndex: 5 }}>
             <div style={{ flex: 1 }} onClick={prevStory}></div>
             <div style={{ flex: 1 }} onClick={nextStory}></div>
           </div>
 
+          {/* 4. IMAGEM OU VÍDEO */}
           <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
             {activeStoryUser.items[currentStoryIndex].media_type === 'video' ? (
               <video src={activeStoryUser.items[currentStoryIndex].media_url} autoPlay playsInline loop style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
@@ -429,6 +447,7 @@ export default function Feed({ session }) {
               <img src={activeStoryUser.items[currentStoryIndex].media_url} alt="Story" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
             )}
 
+            {/* 5. LEGENDA */}
             {activeStoryUser.items[currentStoryIndex].caption && (
               <div style={{ position: 'absolute', bottom: '100px', left: '20px', right: '20px', textAlign: 'center', zIndex: 10 }}>
                 <span style={{ background: 'rgba(0,0,0,0.6)', color: 'white', padding: '8px 16px', borderRadius: '12px', fontSize: '16px', textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
@@ -457,7 +476,7 @@ export default function Feed({ session }) {
 
             <h3 style={{ margin: '0 0 5px 0' }}>{isStoryMode ? '📸 Novo Story' : '🚀 Novo Post'}</h3>
             <p style={{ margin: '0 0 15px 0', fontSize: '12px', color: 'var(--text-dim)' }}>
-              Usa <strong style={{color: 'var(--accent)'}}>@nome</strong> para notificar alguém diretamente!
+              Usa <strong style={{ color: 'var(--accent)' }}>@nome</strong> para notificar alguém diretamente!
             </p>
 
             <form onSubmit={publicar}>
@@ -501,13 +520,13 @@ export default function Feed({ session }) {
           const jaDeuLike = post.likes?.some((l) => l.user_id === session.user.id);
           const eMeuPost = post.user_id === session.user.id;
           const aEditar = editingPostId === post.id;
-          
+
           const avatar = post.profiles?.avatar_url;
 
           return (
             <div key={post.id} className="card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                
+
                 {/* CABEÇALHO DO POST COM FOTO DE PERFIL */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <div style={{ width: '42px', height: '42px', borderRadius: '50%', overflow: 'hidden', background: 'var(--input-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--accent)' }}>
