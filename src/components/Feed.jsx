@@ -43,12 +43,21 @@ export default function Feed({ session }) {
   const [activeStoryUser, setActiveStoryUser] = useState(null);
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
 
+  // Memória de stories vistos
+  const [seenStories, setSeenStories] = useState([]);
+
   function showToast(message, type = 'success') {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 4000);
   }
 
   useEffect(() => {
+    // Carrega os vistos da memória do telemóvel ao abrir
+    const vistosGuardados = localStorage.getItem('seenStories_geres');
+    if (vistosGuardados) {
+      setSeenStories(JSON.parse(vistosGuardados));
+    }
+    
     carregarTudo();
 
     const recarregarSeVisivel = () => {
@@ -65,6 +74,19 @@ export default function Feed({ session }) {
       window.removeEventListener('focus', recarregarSeVisivel);
     };
   }, []);
+
+  // Marca o story como visto automaticamente mal aparece no ecrã
+  useEffect(() => {
+    if (activeStoryUser && activeStoryUser.items[currentStoryIndex]) {
+      const storyAtualId = activeStoryUser.items[currentStoryIndex].id;
+      setSeenStories(prev => {
+        if (prev.includes(storyAtualId)) return prev; // já estava visto
+        const novosVistos = [...prev, storyAtualId];
+        localStorage.setItem('seenStories_geres', JSON.stringify(novosVistos));
+        return novosVistos;
+      });
+    }
+  }, [activeStoryUser, currentStoryIndex]);
 
   async function carregarTudo() {
     setIsRefreshing(true);
@@ -366,7 +388,7 @@ export default function Feed({ session }) {
       {/* BARRA DE STORIES ESTILO INSTAGRAM */}
       <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '15px', marginBottom: '15px', borderBottom: '1px solid var(--border)' }}>
 
-        {/* BOTÃO ADICIONAR STORY */}
+        {/* BOTÃO ADICIONAR STORY (Agora perfeitamente redondo) */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '70px', cursor: 'pointer' }} onClick={() => { setIsStoryMode(true); setIsModalOpen(true); }}>
           <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--input-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed var(--text-dim)', position: 'relative' }}>
             <Plus size={24} color="var(--text-dim)" />
@@ -378,27 +400,36 @@ export default function Feed({ session }) {
         </div>
 
         {/* LISTA DE STORIES ATIVOS */}
-        {groupedStories.map(group => (
-          <div key={group.userId} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '70px', cursor: 'pointer' }} onClick={() => abrirStory(group)}>
-            <div style={{ width: '64px', height: '64px', borderRadius: '50%', padding: '3px', background: 'linear-gradient(45deg, #f97316, #fbbf24)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: 'var(--bg-card)', border: '2px solid var(--bg-card)' }}>
-                {group.avatar ? (
-                  <img src={group.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <User size={24} color="var(--text-dim)" />
-                  </div>
-                )}
+        {groupedStories.map(group => {
+          // Verifica se TODOS os stories desta pessoa já foram vistos
+          const todosVistos = group.items.every(story => seenStories.includes(story.id));
+          
+          // Se já viu tudo fica argola cinzenta. Se não, fica laranja!
+          const corArgola = todosVistos ? 'var(--text-dim)' : 'linear-gradient(45deg, #f97316, #fbbf24)';
+          const opacidadeNome = todosVistos ? 0.5 : 1;
+
+          return (
+            <div key={group.userId} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '70px', cursor: 'pointer' }} onClick={() => abrirStory(group)}>
+              <div style={{ width: '64px', height: '64px', borderRadius: '50%', padding: '3px', background: corArgola, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: 'var(--bg-card)', border: '2px solid var(--bg-card)' }}>
+                  {group.avatar ? (
+                    <img src={group.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <User size={24} color="var(--text-dim)" />
+                    </div>
+                  )}
+                </div>
               </div>
+              <span style={{ fontSize: '12px', color: 'var(--text)', opacity: opacidadeNome, marginTop: '5px', fontWeight: group.userId === session.user.id ? 'bold' : 'normal' }}>
+                {group.userId === session.user.id ? 'Tu' : group.username}
+              </span>
             </div>
-            <span style={{ fontSize: '12px', color: 'var(--text)', marginTop: '5px', fontWeight: group.userId === session.user.id ? 'bold' : 'normal' }}>
-              {group.userId === session.user.id ? 'Tu' : group.username}
-            </span>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-{/* STORY VIEWER (FULLSCREEN) */}
+      {/* STORY VIEWER (FULLSCREEN) */}
       {activeStoryUser && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'black', zIndex: 10000, display: 'flex', flexDirection: 'column' }}>
           
@@ -417,7 +448,7 @@ export default function Feed({ session }) {
             ))}
           </div>
 
-          {/* 2. CABEÇALHO DO STORY (Empurrado ligeiramente para baixo) */}
+          {/* 2. CABEÇALHO DO STORY */}
           <div style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top) + 15px)', left: 0, width: '100%', padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ width: '32px', height: '32px', borderRadius: '50%', overflow: 'hidden', border: '1px solid white' }}>
