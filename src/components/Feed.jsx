@@ -37,6 +37,10 @@ export default function Feed({ session }) {
   const [editingPostId, setEditingPostId] = useState(null);
   const [editCaptionText, setEditCaptionText] = useState('');
 
+  // --- NOVOS ESTADOS PARA COMENTÁRIOS ---
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editCommentText, setEditCommentText] = useState('');
+
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   // Story Viewer State
@@ -422,6 +426,38 @@ export default function Feed({ session }) {
     }
   }
 
+  // --- NOVAS FUNÇÕES PARA APAGAR E EDITAR COMENTÁRIOS ---
+  async function apagarComentario(commentId) {
+    const confirmacao = window.confirm("Queres mesmo apagar este comentário?");
+    if (!confirmacao) return;
+
+    const { error } = await supabase.from('comments').delete().eq('id', commentId);
+
+    if (error) {
+      showToast(`Erro ao apagar: ${error.message}`, 'error');
+    } else {
+      showToast('Comentário apagado! 🗑️', 'success');
+      carregarPosts();
+    }
+  }
+
+  async function guardarEdicaoComentario(commentId) {
+    if (!editCommentText.trim()) return;
+
+    const { error } = await supabase
+      .from('comments')
+      .update({ content: editCommentText })
+      .eq('id', commentId);
+
+    if (error) {
+      showToast(`Erro ao atualizar: ${error.message}`, 'error');
+    } else {
+      showToast('Comentário atualizado! ✏️', 'success');
+      setEditingCommentId(null);
+      carregarPosts();
+    }
+  }
+
   async function toggleLike(postId, jaDeuLike, postOwnerId) {
     setPosts(postsAtuais => postsAtuais.map(post => {
       if (post.id === postId) {
@@ -488,7 +524,7 @@ export default function Feed({ session }) {
       {/* BARRA DE STORIES ESTILO INSTAGRAM */}
       <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '15px', marginBottom: '15px', borderBottom: '1px solid var(--border)' }}>
 
-        {/* BOTÃO ADICIONAR STORY */}
+        {/* BOTÃO ADICIONAR STORY (Agora perfeitamente redondo) */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '70px', cursor: 'pointer' }} onClick={() => { setIsStoryMode(true); setIsModalOpen(true); }}>
           <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--input-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed var(--text-dim)', position: 'relative' }}>
             <Plus size={24} color="var(--text-dim)" />
@@ -776,12 +812,51 @@ export default function Feed({ session }) {
               </div>
 
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '10px' }}>
-                {post.comments?.map((c) => (
-                  <p key={c.id} style={{ fontSize: '13px', margin: '6px 0', color: 'var(--text)' }}>
-                    <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>@{c.profiles?.username}: </span>
-                    {c.content}
-                  </p>
-                ))}
+                
+                {/* RENDERIZAÇÃO DOS COMENTÁRIOS */}
+                {post.comments?.map((c) => {
+                  const eMeuComentario = c.user_id === session.user.id;
+                  const aEditarComentario = editingCommentId === c.id;
+
+                  return (
+                    <div key={c.id} style={{ display: 'flex', flexDirection: 'column', margin: '6px 0' }}>
+                      {aEditarComentario ? (
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
+                          <input
+                            className="input-field"
+                            style={{ margin: 0, padding: '4px 8px', fontSize: '13px', flex: 1 }}
+                            type="text"
+                            value={editCommentText}
+                            onChange={(e) => setEditCommentText(e.target.value)}
+                          />
+                          <button onClick={() => guardarEdicaoComentario(c.id)} style={{ background: 'var(--accent)', border: 'none', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer' }}>
+                            <Check size={14} color="white" />
+                          </button>
+                          <button onClick={() => setEditingCommentId(null)} style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer' }}>
+                            <X size={14} color="var(--text-dim)" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                          <p style={{ fontSize: '13px', margin: 0, color: 'var(--text)', flex: 1, wordBreak: 'break-word' }}>
+                            <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>@{c.profiles?.username}: </span>
+                            {c.content}
+                          </p>
+                          {eMeuComentario && (
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button onClick={() => { setEditingCommentId(c.id); setEditCommentText(c.content); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }} title="Editar comentário">
+                                <Edit2 size={12} color="var(--text-dim)" />
+                              </button>
+                              <button onClick={() => apagarComentario(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }} title="Apagar comentário">
+                                <Trash2 size={12} color="#ef4444" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
 
                 <div style={{ position: 'relative', marginTop: '12px' }}>
                   {/* DROPDOWN DE SUGESTÕES (COMENTÁRIOS NO FEED) */}
