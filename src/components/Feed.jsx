@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Heart, Send, Plus, X, Trash2, Edit2, Check, RefreshCw, User, Camera } from 'lucide-react';
+import { Heart, Send, Plus, X, Trash2, Edit2, Check, RefreshCw, User, Camera, Filter } from 'lucide-react';
 
 function formatarTempo(dataIso) {
   if (!dataIso) return '';
@@ -37,10 +37,6 @@ export default function Feed({ session }) {
   const [editingPostId, setEditingPostId] = useState(null);
   const [editCaptionText, setEditCaptionText] = useState('');
 
-  // --- NOVOS ESTADOS PARA COMENTÁRIOS ---
-  const [editingCommentId, setEditingCommentId] = useState(null);
-  const [editCommentText, setEditCommentText] = useState('');
-
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   // Story Viewer State
@@ -50,12 +46,17 @@ export default function Feed({ session }) {
   // Memória de stories vistos
   const [seenStories, setSeenStories] = useState([]);
 
-  // --- NOVOS ESTADOS PARA AUTO-COMPLETE DE MENÇÕES ---
+  // --- NOVOS ESTADOS (Menções, Comentários e Filtros) ---
   const [allUsers, setAllUsers] = useState([]);
   const [mentionSuggestions, setMentionSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [mentionStartIndex, setMentionStartIndex] = useState(0);
   const [activeCommentPostId, setActiveCommentPostId] = useState(null);
+
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editCommentText, setEditCommentText] = useState('');
+
+  const [filterType, setFilterType] = useState('recentes');
 
   function showToast(message, type = 'success') {
     setToast({ show: true, message, type });
@@ -105,10 +106,14 @@ export default function Feed({ session }) {
     setIsRefreshing(false);
   }
 
-  // Vai buscar toda a malta para podermos sugerir os nomes
   async function carregarTodosUsuarios() {
-    const { data } = await supabase.from('profiles').select('id, username, avatar_url');
-    if (data) setAllUsers(data);
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, username, avatar_url');
+      
+    if (data) {
+      setAllUsers(data);
+    }
   }
 
   async function carregarPosts() {
@@ -175,7 +180,7 @@ export default function Feed({ session }) {
       setMentionSuggestions(filtered);
       setShowSuggestions(true);
       setMentionStartIndex(cursor - currentWord.length);
-      setActiveCommentPostId(null); // Garante que a box só abre no modal
+      setActiveCommentPostId(null);
     } else {
       setShowSuggestions(false);
     }
@@ -209,7 +214,7 @@ export default function Feed({ session }) {
       setMentionSuggestions(filtered);
       setShowSuggestions(true);
       setMentionStartIndex(cursor - currentWord.length);
-      setActiveCommentPostId(postId); // Marca que o dropdown é para este comentário
+      setActiveCommentPostId(postId); 
     } else {
       setShowSuggestions(false);
       setActiveCommentPostId(null);
@@ -426,7 +431,7 @@ export default function Feed({ session }) {
     }
   }
 
-  // --- NOVAS FUNÇÕES PARA APAGAR E EDITAR COMENTÁRIOS ---
+  // --- LÓGICA DE EDITAR E APAGAR COMENTÁRIOS ---
   async function apagarComentario(commentId) {
     const confirmacao = window.confirm("Queres mesmo apagar este comentário?");
     if (!confirmacao) return;
@@ -499,6 +504,23 @@ export default function Feed({ session }) {
     }
   }
 
+  // --- LÓGICA DE FILTRAGEM DO FEED ---
+  const postsFiltrados = [...posts].filter(post => {
+    if (filterType === 'meus') {
+      return post.user_id === session.user.id;
+    }
+    return true;
+  }).sort((a, b) => {
+    if (filterType === 'populares') {
+      return (b.likes?.length || 0) - (a.likes?.length || 0);
+    }
+    if (filterType === 'antigos') {
+      return new Date(a.created_at) - new Date(b.created_at);
+    }
+    // recentes (default)
+    return new Date(b.created_at) - new Date(a.created_at); 
+  });
+
   return (
     <div style={{ padding: '10px', paddingBottom: 'calc(130px + env(safe-area-inset-bottom))' }}>
 
@@ -516,8 +538,13 @@ export default function Feed({ session }) {
         <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
           Feed
         </h2>
-        <button onClick={carregarTudo} disabled={isRefreshing} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
-          <RefreshCw size={14} className={isRefreshing ? "spin" : ""} /> {isRefreshing ? 'A atualizar...' : 'Atualizar'}
+        <button 
+          onClick={carregarTudo} 
+          disabled={isRefreshing} 
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: '20px', color: 'var(--accent)', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}
+        >
+          <RefreshCw size={14} className={isRefreshing ? "spin" : ""} /> 
+          {isRefreshing ? 'A atualizar...' : 'Atualizar'}
         </button>
       </div>
 
@@ -537,7 +564,10 @@ export default function Feed({ session }) {
 
         {/* LISTA DE STORIES ATIVOS */}
         {groupedStories.map(group => {
+          // Verifica se TODOS os stories desta pessoa já foram vistos
           const todosVistos = group.items.every(story => seenStories.includes(story.id));
+          
+          // Se já viu tudo fica argola cinzenta. Se não, fica laranja!
           const corArgola = todosVistos ? 'rgba(255, 255, 255, 0.15)' : 'linear-gradient(45deg, #f97316, #fbbf24)';
           const opacidadeNome = todosVistos ? 0.5 : 1;
 
@@ -573,6 +603,7 @@ export default function Feed({ session }) {
                 <div style={{
                   height: '100%',
                   background: 'white',
+                  // Preenche 100% se já passou ou é o atual, 0% se ainda não chegou
                   width: idx <= currentStoryIndex ? '100%' : '0%',
                   transition: 'width 0.2s ease-in-out'
                 }}></div>
@@ -675,7 +706,11 @@ export default function Feed({ session }) {
                         borderBottom: '1px solid var(--border)', cursor: 'pointer'
                       }}>
                         <div style={{ width: '24px', height: '24px', borderRadius: '50%', overflow: 'hidden', background: 'var(--input-bg)' }}>
-                          {u.avatar_url ? <img src={u.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <User size={16} color="var(--text-dim)" style={{ margin: '4px' }} />}
+                          {u.avatar_url ? (
+                            <img src={u.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <User size={16} color="var(--text-dim)" style={{ margin: '4px' }} />
+                          )}
                         </div>
                         <span style={{ color: 'var(--text)', fontWeight: 'bold', fontSize: '14px' }}>{u.username}</span>
                       </div>
@@ -700,21 +735,41 @@ export default function Feed({ session }) {
         </div>
       )}
 
+      {/* BARRA DE FILTRAGEM DO FEED */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+        <h3 style={{ margin: 0, fontSize: '15px', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <Filter size={16} /> Publicações
+        </h3>
+        <select 
+          value={filterType} 
+          onChange={(e) => setFilterType(e.target.value)}
+          style={{ 
+            background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)', 
+            borderRadius: '10px', padding: '6px 12px', fontSize: '13px', outline: 'none', fontWeight: 'bold', cursor: 'pointer' 
+          }}
+        >
+          <option value="recentes">Mais Recentes</option>
+          <option value="populares">Mais Populares 🔥</option>
+          <option value="meus">Só os Meus 🙋‍♂️</option>
+          <option value="antigos">Mais Antigos 🕰️</option>
+        </select>
+      </div>
+
       {/* FEED DE POSTS */}
-      {posts.length === 0 ? (
+      {postsFiltrados.length === 0 ? (
         <div style={{
           textAlign: 'center', marginTop: '40px', padding: '30px 20px',
           background: 'var(--bg-card)', borderRadius: '16px',
           border: '2px dashed var(--accent)', backdropFilter: 'blur(5px)'
         }}>
           <span style={{ fontSize: '45px', display: 'block', marginBottom: '15px' }}>🏜️</span>
-          <h3 style={{ color: 'var(--accent)', margin: '0 0 10px 0', fontSize: '22px' }}>O feed está uma seca!</h3>
+          <h3 style={{ color: 'var(--accent)', margin: '0 0 10px 0', fontSize: '22px' }}>Nada por aqui!</h3>
           <p style={{ color: 'var(--text)', margin: 0, fontWeight: '500', fontSize: '15px' }}>
-            Ainda ninguém publicou nada. Clica no botão laranja no fundo do ecrã e arranca com a festa! 🍻
+            Não encontramos publicações para este filtro.
           </p>
         </div>
       ) : (
-        posts.map((post) => {
+        postsFiltrados.map((post) => {
           const jaDeuLike = post.likes?.some((l) => l.user_id === session.user.id);
           const eMeuPost = post.user_id === session.user.id;
           const aEditar = editingPostId === post.id;
@@ -774,7 +829,7 @@ export default function Feed({ session }) {
                 <img src={post.media_url} alt="Media" style={{ width: '100%', borderRadius: '12px' }} />
               )}
 
-              {/* MODO DE EDIÇÃO */}
+              {/* MODO DE EDIÇÃO DO POST */}
               {aEditar ? (
                 <div style={{ display: 'flex', gap: '8px', margin: '12px 0' }}>
                   <input
@@ -813,7 +868,7 @@ export default function Feed({ session }) {
 
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '10px' }}>
                 
-                {/* RENDERIZAÇÃO DOS COMENTÁRIOS */}
+                {/* RENDERING DOS COMENTÁRIOS COM EDIÇÃO E REMOÇÃO */}
                 {post.comments?.map((c) => {
                   const eMeuComentario = c.user_id === session.user.id;
                   const aEditarComentario = editingCommentId === c.id;
@@ -829,10 +884,16 @@ export default function Feed({ session }) {
                             value={editCommentText}
                             onChange={(e) => setEditCommentText(e.target.value)}
                           />
-                          <button onClick={() => guardarEdicaoComentario(c.id)} style={{ background: 'var(--accent)', border: 'none', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer' }}>
+                          <button 
+                            onClick={() => guardarEdicaoComentario(c.id)} 
+                            style={{ background: 'var(--accent)', border: 'none', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer' }}
+                          >
                             <Check size={14} color="white" />
                           </button>
-                          <button onClick={() => setEditingCommentId(null)} style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer' }}>
+                          <button 
+                            onClick={() => setEditingCommentId(null)} 
+                            style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer' }}
+                          >
                             <X size={14} color="var(--text-dim)" />
                           </button>
                         </div>
@@ -844,10 +905,18 @@ export default function Feed({ session }) {
                           </p>
                           {eMeuComentario && (
                             <div style={{ display: 'flex', gap: '8px' }}>
-                              <button onClick={() => { setEditingCommentId(c.id); setEditCommentText(c.content); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }} title="Editar comentário">
+                              <button 
+                                onClick={() => { setEditingCommentId(c.id); setEditCommentText(c.content); }} 
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }} 
+                                title="Editar comentário"
+                              >
                                 <Edit2 size={12} color="var(--text-dim)" />
                               </button>
-                              <button onClick={() => apagarComentario(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }} title="Apagar comentário">
+                              <button 
+                                onClick={() => apagarComentario(c.id)} 
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }} 
+                                title="Apagar comentário"
+                              >
                                 <Trash2 size={12} color="#ef4444" />
                               </button>
                             </div>
@@ -873,7 +942,11 @@ export default function Feed({ session }) {
                           borderBottom: '1px solid var(--border)', cursor: 'pointer'
                         }}>
                           <div style={{ width: '24px', height: '24px', borderRadius: '50%', overflow: 'hidden', background: 'var(--input-bg)' }}>
-                            {u.avatar_url ? <img src={u.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <User size={16} color="var(--text-dim)" style={{ margin: '4px' }} />}
+                            {u.avatar_url ? (
+                              <img src={u.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              <User size={16} color="var(--text-dim)" style={{ margin: '4px' }} />
+                            )}
                           </div>
                           <span style={{ color: 'var(--text)', fontWeight: 'bold', fontSize: '14px' }}>{u.username}</span>
                         </div>
