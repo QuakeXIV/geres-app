@@ -46,6 +46,13 @@ export default function Feed({ session }) {
   // Memória de stories vistos
   const [seenStories, setSeenStories] = useState([]);
 
+  // --- NOVOS ESTADOS PARA AUTO-COMPLETE DE MENÇÕES ---
+  const [allUsers, setAllUsers] = useState([]);
+  const [mentionSuggestions, setMentionSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [mentionStartIndex, setMentionStartIndex] = useState(0);
+  const [activeCommentPostId, setActiveCommentPostId] = useState(null);
+
   function showToast(message, type = 'success') {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 4000);
@@ -90,8 +97,14 @@ export default function Feed({ session }) {
 
   async function carregarTudo() {
     setIsRefreshing(true);
-    await Promise.all([carregarPosts(), carregarStories()]);
+    await Promise.all([carregarPosts(), carregarStories(), carregarTodosUsuarios()]);
     setIsRefreshing(false);
+  }
+
+  // Vai buscar toda a malta para podermos sugerir os nomes
+  async function carregarTodosUsuarios() {
+    const { data } = await supabase.from('profiles').select('id, username, avatar_url');
+    if (data) setAllUsers(data);
   }
 
   async function carregarPosts() {
@@ -139,7 +152,79 @@ export default function Feed({ session }) {
     }
   }
 
-  // --- DETETOR DE MENÇÕES ---
+  // --- LÓGICA DE AUTO-COMPLETE DE MENÇÕES (MODAL POST/STORY) ---
+  function handleCaptionChange(e) {
+    const value = e.target.value;
+    setCaption(value);
+
+    // Detetar se estamos a escrever uma menção
+    const cursor = e.target.selectionStart;
+    const textBeforeCursor = value.slice(0, cursor);
+    const words = textBeforeCursor.split(/\s/);
+    const currentWord = words[words.length - 1];
+
+    if (currentWord.startsWith('@')) {
+      const searchText = currentWord.slice(1).toLowerCase();
+      const filtered = allUsers.filter(u => 
+        u.username && u.username.toLowerCase().includes(searchText)
+      );
+      setMentionSuggestions(filtered);
+      setShowSuggestions(true);
+      setMentionStartIndex(cursor - currentWord.length);
+      setActiveCommentPostId(null); // Garante que a box só abre no modal
+    } else {
+      setShowSuggestions(false);
+    }
+  }
+
+  function selecionarMencao(username) {
+    const textBefore = caption.slice(0, mentionStartIndex);
+    const textAfterTemp = caption.slice(mentionStartIndex);
+    const nextSpace = textAfterTemp.indexOf(' ');
+    const textAfter = nextSpace === -1 ? '' : textAfterTemp.slice(nextSpace);
+    
+    setCaption(`${textBefore}@${username} ${textAfter}`);
+    setShowSuggestions(false);
+  }
+
+  // --- LÓGICA DE AUTO-COMPLETE DE MENÇÕES (COMENTÁRIOS NO FEED) ---
+  function handleCommentChange(e, postId) {
+    const value = e.target.value;
+    setCommentText({ ...commentText, [postId]: value });
+
+    const cursor = e.target.selectionStart;
+    const textBeforeCursor = value.slice(0, cursor);
+    const words = textBeforeCursor.split(/\s/);
+    const currentWord = words[words.length - 1];
+
+    if (currentWord.startsWith('@')) {
+      const searchText = currentWord.slice(1).toLowerCase();
+      const filtered = allUsers.filter(u => 
+        u.username && u.username.toLowerCase().includes(searchText)
+      );
+      setMentionSuggestions(filtered);
+      setShowSuggestions(true);
+      setMentionStartIndex(cursor - currentWord.length);
+      setActiveCommentPostId(postId); // Marca que o dropdown é para este comentário
+    } else {
+      setShowSuggestions(false);
+      setActiveCommentPostId(null);
+    }
+  }
+
+  function selecionarMencaoComentario(username, postId) {
+    const text = commentText[postId] || '';
+    const textBefore = text.slice(0, mentionStartIndex);
+    const textAfterTemp = text.slice(mentionStartIndex);
+    const nextSpace = textAfterTemp.indexOf(' ');
+    const textAfter = nextSpace === -1 ? '' : textAfterTemp.slice(nextSpace);
+    
+    setCommentText({ ...commentText, [postId]: `${textBefore}@${username} ${textAfter}` });
+    setShowSuggestions(false);
+    setActiveCommentPostId(null);
+  }
+
+  // --- DETETOR DE MENÇÕES PARA NOTIFICAR (BACKEND) ---
   const extrairMencoes = (texto) => {
     if (!texto) return [];
     const regex = /@([a-zA-Z0-9_]+)/g;
@@ -403,7 +488,7 @@ export default function Feed({ session }) {
       {/* BARRA DE STORIES ESTILO INSTAGRAM */}
       <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '15px', marginBottom: '15px', borderBottom: '1px solid var(--border)' }}>
 
-        {/* BOTÃO ADICIONAR STORY (Agora perfeitamente redondo) */}
+        {/* BOTÃO ADICIONAR STORY */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '70px', cursor: 'pointer' }} onClick={() => { setIsStoryMode(true); setIsModalOpen(true); }}>
           <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--input-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed var(--text-dim)', position: 'relative' }}>
             <Plus size={24} color="var(--text-dim)" />
@@ -416,11 +501,8 @@ export default function Feed({ session }) {
 
         {/* LISTA DE STORIES ATIVOS */}
         {groupedStories.map(group => {
-          // Verifica se TODOS os stories desta pessoa já foram vistos
           const todosVistos = group.items.every(story => seenStories.includes(story.id));
-          
-          // Se já viu tudo fica argola cinzenta. Se não, fica laranja!
-          const corArgola = todosVistos ? 'var(--text-dim)' : 'linear-gradient(45deg, #f97316, #fbbf24)';
+          const corArgola = todosVistos ? 'rgba(255, 255, 255, 0.15)' : 'linear-gradient(45deg, #f97316, #fbbf24)';
           const opacidadeNome = todosVistos ? 0.5 : 1;
 
           return (
@@ -455,7 +537,6 @@ export default function Feed({ session }) {
                 <div style={{
                   height: '100%',
                   background: 'white',
-                  // Preenche 100% se já passou ou é o atual, 0% se ainda não chegou
                   width: idx <= currentStoryIndex ? '100%' : '0%',
                   transition: 'width 0.2s ease-in-out'
                 }}></div>
@@ -463,7 +544,7 @@ export default function Feed({ session }) {
             ))}
           </div>
 
-          {/* 2. CABEÇALHO DO STORY (Empurrado ligeiramente para baixo e com o X arranjado) */}
+          {/* 2. CABEÇALHO DO STORY */}
           <div style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top) + 15px)', left: 0, width: '100%', padding: '0 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10, boxSizing: 'border-box' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ width: '32px', height: '32px', borderRadius: '50%', overflow: 'hidden', border: '1px solid white' }}>
@@ -542,13 +623,39 @@ export default function Feed({ session }) {
                 onChange={(e) => setFile(e.target.files[0])}
                 style={{ padding: '10px' }}
               />
-              <input
-                className="input-field"
-                type="text"
-                placeholder={isStoryMode ? "Escreve algo para o story..." : "Escreve uma legenda..."}
-                value={caption}
-                onChange={(e) => setCaption(e.target.value)}
-              />
+              
+              <div style={{ position: 'relative' }}>
+                {/* DROPDOWN DE SUGESTÕES (CRIAR POST/STORY) */}
+                {showSuggestions && !activeCommentPostId && mentionSuggestions.length > 0 && (
+                  <div style={{
+                    position: 'absolute', bottom: '100%', left: 0, width: '100%', 
+                    background: 'var(--bg-card)', border: '1px solid var(--border)', 
+                    borderRadius: '12px', maxHeight: '150px', overflowY: 'auto', 
+                    zIndex: 10, boxShadow: '0 -4px 10px rgba(0,0,0,0.1)', marginBottom: '5px'
+                  }}>
+                    {mentionSuggestions.map(u => (
+                      <div key={u.id} onClick={() => selecionarMencao(u.username)} style={{
+                        display: 'flex', alignItems: 'center', gap: '10px', padding: '10px',
+                        borderBottom: '1px solid var(--border)', cursor: 'pointer'
+                      }}>
+                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', overflow: 'hidden', background: 'var(--input-bg)' }}>
+                          {u.avatar_url ? <img src={u.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <User size={16} color="var(--text-dim)" style={{ margin: '4px' }} />}
+                        </div>
+                        <span style={{ color: 'var(--text)', fontWeight: 'bold', fontSize: '14px' }}>{u.username}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <input
+                  className="input-field"
+                  type="text"
+                  placeholder={isStoryMode ? "Escreve algo para o story..." : "Escreve uma legenda..."}
+                  value={caption}
+                  onChange={handleCaptionChange}
+                />
+              </div>
+
               <button className="btn-primary" disabled={uploading} style={{ background: isStoryMode ? 'linear-gradient(45deg, #f97316, #fbbf24)' : 'var(--accent)' }}>
                 {uploading ? 'A enviar... aguarda ⏳' : (isStoryMode ? 'Adicionar ao Story' : 'Publicar no Feed')}
               </button>
@@ -676,21 +783,45 @@ export default function Feed({ session }) {
                   </p>
                 ))}
 
-                <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                  <input
-                    className="input-field"
-                    style={{ padding: '8px 12px', fontSize: '14px', margin: 0 }}
-                    type="text"
-                    placeholder="Comentar..."
-                    value={commentText[post.id] || ''}
-                    onChange={(e) => setCommentText({ ...commentText, [post.id]: e.target.value })}
-                  />
-                  <button
-                    style={{ background: 'var(--accent)', border: 'none', borderRadius: '8px', padding: '0 12px', cursor: 'pointer' }}
-                    onClick={() => adicionarComentario(post.id, post.user_id)}
-                  >
-                    <Send size={18} color="white" />
-                  </button>
+                <div style={{ position: 'relative', marginTop: '12px' }}>
+                  {/* DROPDOWN DE SUGESTÕES (COMENTÁRIOS NO FEED) */}
+                  {showSuggestions && activeCommentPostId === post.id && mentionSuggestions.length > 0 && (
+                    <div style={{
+                      position: 'absolute', bottom: '100%', left: 0, width: '100%',
+                      background: 'var(--bg-card)', border: '1px solid var(--border)',
+                      borderRadius: '12px', maxHeight: '150px', overflowY: 'auto',
+                      zIndex: 10, boxShadow: '0 -4px 10px rgba(0,0,0,0.2)', marginBottom: '5px'
+                    }}>
+                      {mentionSuggestions.map(u => (
+                        <div key={u.id} onClick={() => selecionarMencaoComentario(u.username, post.id)} style={{
+                          display: 'flex', alignItems: 'center', gap: '10px', padding: '10px',
+                          borderBottom: '1px solid var(--border)', cursor: 'pointer'
+                        }}>
+                          <div style={{ width: '24px', height: '24px', borderRadius: '50%', overflow: 'hidden', background: 'var(--input-bg)' }}>
+                            {u.avatar_url ? <img src={u.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <User size={16} color="var(--text-dim)" style={{ margin: '4px' }} />}
+                          </div>
+                          <span style={{ color: 'var(--text)', fontWeight: 'bold', fontSize: '14px' }}>{u.username}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      className="input-field"
+                      style={{ padding: '8px 12px', fontSize: '14px', margin: 0 }}
+                      type="text"
+                      placeholder="Comentar ou mencionar (@)..."
+                      value={commentText[post.id] || ''}
+                      onChange={(e) => handleCommentChange(e, post.id)}
+                    />
+                    <button
+                      style={{ background: 'var(--accent)', border: 'none', borderRadius: '8px', padding: '0 12px', cursor: 'pointer' }}
+                      onClick={() => adicionarComentario(post.id, post.user_id)}
+                    >
+                      <Send size={18} color="white" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
