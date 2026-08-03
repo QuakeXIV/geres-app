@@ -27,6 +27,7 @@ export default function Tasca({ session }) {
     { id: 7, nome: 'Gin', putometro: 5, icone: '🍹' },
     { id: 8, nome: 'Copo de vinho', putometro: 2, icone: '🍹' },
     { id: 9, nome: 'Fino + Favaios', putometro: 1.5, icone: '🍹' },
+    { id: 10, nome: 'Charro', putometro: 2, icone: '🌿'}
   ]);
 
   useEffect(() => {
